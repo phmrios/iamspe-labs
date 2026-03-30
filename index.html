@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IAMSPE Labs — Padronizador de Exames Laboratoriais</title>
+<style>
+  /* ── Google Fonts ──────────────────────────────────────────── */
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+  /* ── Design tokens ─────────────────────────────────────────── */
+  :root {
+    --verde-escuro:   #0F6A38;
+    --verde-escuro-2: #0a5029;
+    --verde-apoio:    #79B84A;
+    --ciano:          #18A9B7;
+    --ciano-escuro:   #0f7d89;
+    --fundo:          #F7FAF8;
+    --fundo-card:     #ffffff;
+    --texto:          #163022;
+    --texto-suave:    #4a6555;
+    --borda:          #CDD9D2;
+    --borda-forte:    #a8c2b4;
+    --erro:           #c0392b;
+    --aviso:          #8a6000;
+    --aviso-bg:       #fffbeb;
+
+    --font-ui:   'Plus Jakarta Sans', sans-serif;
+    --font-serif: 'Lora', serif;
+    --font-mono:  'DM Mono', monospace;
+
+    --radius:  8px;
+    --radius-lg: 12px;
+    --shadow:  0 1px 4px rgba(15,106,56,.10), 0 4px 16px rgba(15,106,56,.06);
+    --shadow-sm: 0 1px 3px rgba(15,106,56,.08);
+    --transition: .18s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── Reset / base ───────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-ui);
+    background: var(--fundo);
+    color: var(--texto);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  a { color: var(--ciano-escuro); }
+  a:focus-visible { outline: 3px solid var(--ciano); outline-offset: 2px; border-radius: 3px; }
+
+  /* ── Skip-link ─────────────────────────────────────────────── */
+  .skip-link {
+    position: absolute; top: -9999px; left: 8px;
+    background: var(--verde-escuro); color: #fff;
+    padding: 8px 14px; border-radius: var(--radius);
+    font-size: .875rem; font-weight: 600; z-index: 9999;
+    text-decoration: none;
+  }
+  .skip-link:focus { top: 8px; }
+
+  /* ── Header ─────────────────────────────────────────────────── */
+  header {
+    background: var(--verde-escuro);
+    color: #fff;
+    padding: 0 1.5rem;
+    border-bottom: 3px solid var(--verde-apoio);
+  }
+  .header-inner {
+    max-width: 900px; margin: 0 auto;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 0;
+  }
+  .header-badge {
+    background: var(--verde-apoio);
+    color: var(--verde-escuro-2);
+    font-family: var(--font-mono);
+    font-size: .7rem; font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: .05em;
+    white-space: nowrap;
+  }
+  .header-titles { flex: 1; }
+  .header-titles h1 {
+    font-family: var(--font-serif);
+    font-size: 1.2rem; font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -.01em;
+  }
+  .header-titles p {
+    font-size: .78rem; opacity: .82;
+    margin-top: 1px;
+    letter-spacing: .01em;
+  }
+
+  /* ── Nav tabs ───────────────────────────────────────────────── */
+  nav {
+    background: var(--verde-escuro-2);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .nav-inner {
+    max-width: 900px; margin: 0 auto;
+    display: flex; gap: 0;
+    padding: 0 1.5rem;
+  }
+  [role="tab"] {
+    font-family: var(--font-ui);
+    font-size: .8rem; font-weight: 500;
+    color: rgba(255,255,255,.72);
+    background: transparent; border: none;
+    padding: .7rem 1.1rem;
+    cursor: pointer;
+    letter-spacing: .02em;
+    border-bottom: 3px solid transparent;
+    transition: color var(--transition), border-color var(--transition);
+    white-space: nowrap;
+  }
+  [role="tab"]:hover { color: #fff; }
+  [role="tab"][aria-selected="true"] {
+    color: #fff;
+    border-bottom-color: var(--ciano);
+  }
+  [role="tab"]:focus-visible {
+    outline: 3px solid var(--ciano);
+    outline-offset: -2px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  /* ── Main ───────────────────────────────────────────────────── */
+  main {
+    max-width: 900px; margin: 0 auto; width: 100%;
+    padding: 2rem 1.5rem;
+    flex: 1;
+  }
+  [role="tabpanel"] { display: none; }
+  [role="tabpanel"].active { display: block; }
+  [role="tabpanel"]:focus-visible { outline: none; }
+
+  /* ── Card ───────────────────────────────────────────────────── */
+  .card {
+    background: var(--fundo-card);
+    border: 1px solid var(--borda);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    box-shadow: var(--shadow);
+  }
+  .card + .card { margin-top: 1.25rem; }
+
+  /* ── Section headings ───────────────────────────────────────── */
+  .section-title {
+    font-family: var(--font-serif);
+    font-size: 1.05rem; font-weight: 600;
+    color: var(--verde-escuro);
+    margin-bottom: .5rem;
+  }
+  .section-desc {
+    font-size: .85rem; color: var(--texto-suave);
+    margin-bottom: 1.25rem;
+    line-height: 1.55;
+  }
+
+  /* ── Labels / form ──────────────────────────────────────────── */
+  label {
+    display: block;
+    font-size: .825rem; font-weight: 600;
+    color: var(--texto);
+    margin-bottom: .4rem;
+  }
+  label span.req { color: var(--erro); margin-left: 2px; }
+
+  textarea, .output-box {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    border: 1.5px solid var(--borda);
+    border-radius: var(--radius);
+    background: #fafcfb;
+    color: var(--texto);
+    padding: .875rem 1rem;
+    resize: vertical;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    line-height: 1.6;
+  }
+  textarea { min-height: 200px; }
+  textarea:focus {
+    outline: none;
+    border-color: var(--verde-escuro);
+    box-shadow: 0 0 0 3px rgba(15,106,56,.15);
+  }
+  textarea::placeholder { color: #8fac9b; font-style: italic; }
+
+  /* ── Output box ─────────────────────────────────────────────── */
+  .output-box {
+    min-height: 80px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #f4faf6;
+    border-color: var(--borda);
+    user-select: all;
+    cursor: text;
+    display: none;
+  }
+  .output-box.visible { display: block; }
+
+  /* ── Botões ─────────────────────────────────────────────────── */
+  .btn-row {
+    display: flex; flex-wrap: wrap; gap: .6rem;
+    margin-top: 1rem;
+  }
+  .btn {
+    font-family: var(--font-ui);
+    font-size: .825rem; font-weight: 600;
+    padding: .55rem 1.2rem;
+    border-radius: var(--radius);
+    border: 2px solid transparent;
+    cursor: pointer;
+    letter-spacing: .02em;
+    transition: background var(--transition), color var(--transition), border-color var(--transition), box-shadow var(--transition);
+    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: .4rem;
+    min-height: 40px; /* alvo confortável */
+  }
+  .btn:focus-visible {
+    outline: 3px solid var(--ciano);
+    outline-offset: 2px;
+  }
+  .btn-primary {
+    background: var(--verde-escuro);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--verde-escuro-2); }
+  .btn-primary:active { box-shadow: 0 0 0 3px rgba(15,106,56,.25); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--verde-escuro);
+    border-color: var(--borda-forte);
+  }
+  .btn-secondary:hover { background: #edf5ef; border-color: var(--verde-escuro); }
+
+  .btn-copy {
+    background: var(--ciano);
+    color: #fff;
+  }
+  .btn-copy:hover { background: var(--ciano-escuro); }
+  .btn-copy:disabled {
+    background: var(--borda);
+    color: #888; cursor: not-allowed;
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--erro);
+    border-color: #e0bcbb;
+  }
+  .btn-danger:hover { background: #fdf1f0; border-color: var(--erro); }
+
+  /* ── Mensagens de status ────────────────────────────────────── */
+  .status-area {
+    margin-top: 1rem;
+  }
+  .msg {
+    font-size: .825rem;
+    padding: .65rem 1rem;
+    border-radius: var(--radius);
+    border-left: 4px solid;
+    display: none;
+  }
+  .msg.visible { display: block; }
+  .msg-success { background: #edfaf2; border-color: var(--verde-apoio); color: #195c30; }
+  .msg-error   { background: #fdf1f0; border-color: var(--erro);        color: #8b1c14; }
+  .msg-warn    { background: var(--aviso-bg); border-color: #c9a000;    color: var(--aviso); }
+  .msg-info    { background: #e8f8fa; border-color: var(--ciano);       color: #0f616b; }
+
+  /* ── Output section ─────────────────────────────────────────── */
+  .output-section { margin-top: 1.5rem; }
+  .output-label-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: .4rem;
+  }
+
+  /* ── Disclaimer banner ──────────────────────────────────────── */
+  .disclaimer-banner {
+    background: var(--aviso-bg);
+    border: 1px solid #e0c97a;
+    border-left: 4px solid #c9a000;
+    border-radius: var(--radius);
+    padding: .75rem 1rem;
+    font-size: .8rem; color: var(--aviso);
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
+    display: flex; gap: .5rem; align-items: flex-start;
+  }
+  .disclaimer-banner svg { flex-shrink: 0; margin-top: 2px; }
+
+  /* ── Como usar ──────────────────────────────────────────────── */
+  .step-list { list-style: none; counter-reset: steps; margin-top: 1rem; }
+  .step-list li {
+    counter-increment: steps;
+    display: flex; gap: 1rem;
+    padding: .85rem 0;
+    border-bottom: 1px solid var(--borda);
+    font-size: .875rem;
+    align-items: flex-start;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-list li::before {
+    content: counter(steps);
+    min-width: 28px; height: 28px;
+    background: var(--verde-escuro);
+    color: #fff;
+    font-size: .75rem; font-weight: 700;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+  }
+
+  .example-block {
+    background: #f0f7f2;
+    border: 1px solid var(--borda);
+    border-radius: var(--radius);
+    padding: 1rem;
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--texto);
+    margin-top: .75rem;
+    line-height: 1.7;
+  }
+
+  /* ── Avisos ─────────────────────────────────────────────────── */
+  .aviso-card h2 {
+    font-family: var(--font-serif);
+    font-size: 1rem; font-weight: 600;
+    color: var(--verde-escuro);
+    margin-bottom: .75rem;
+    margin-top: 1.25rem;
+  }
+  .aviso-card h2:first-child { margin-top: 0; }
+  .aviso-card p {
+    font-size: .875rem;
+    line-height: 1.7;
+    color: var(--texto-suave);
+    margin-bottom: .6rem;
+  }
+  .aviso-card p strong { color: var(--texto); }
+
+  /* ── Footer ─────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--borda);
+    background: #eef4f0;
+    padding: .9rem 1.5rem;
+    text-align: center;
+  }
+  .footer-inner {
+    max-width: 900px; margin: 0 auto;
+    font-size: .78rem; color: var(--texto-suave);
+    line-height: 1.5;
+  }
+  .footer-inner strong { color: var(--texto); }
+
+  /* ── Live region ────────────────────────────────────────────── */
+  #live-region { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  /* ── Responsive ─────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    main { padding: 1.25rem 1rem; }
+    .card { padding: 1.25rem; }
+    .header-inner { flex-direction: column; align-items: flex-start; gap: .5rem; }
+    .nav-inner { overflow-x: auto; padding-bottom: 0; }
+    [role="tab"] { padding: .65rem .85rem; font-size: .75rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Skip link acessibilidade -->
+<a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
+
+<!-- Live region para leitores de tela -->
+<div id="live-region" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ── HEADER ─────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="header-badge" aria-hidden="true">LABS v1</div>
+    <div class="header-titles">
+      <h1>IAMSPE Labs — Padronizador de Exames Laboratoriais</h1>
+      <p>Extração e organização automática de laudos. Uso exclusivamente operacional de apoio.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ── NAV TABS ──────────────────────────────────────────────── -->
+<nav aria-label="Navegação principal">
+  <div class="nav-inner" role="tablist" aria-label="Seções da ferramenta">
+    <button role="tab" id="tab-processar" aria-controls="panel-processar" aria-selected="true">
+      Processar Exames
+    </button>
+    <button role="tab" id="tab-como-usar" aria-controls="panel-como-usar" aria-selected="false" tabindex="-1">
+      Como Usar
+    </button>
+    <button role="tab" id="tab-avisos" aria-controls="panel-avisos" aria-selected="false" tabindex="-1">
+      Avisos / Responsabilidade
+    </button>
+  </div>
+</nav>
+
+<!-- ── MAIN ──────────────────────────────────────────────────── -->
+<main id="main-content">
+
+  <!-- ═══ ABA 1: PROCESSAR ════════════════════════════════════ -->
+  <div role="tabpanel" id="panel-processar" aria-labelledby="tab-processar" class="active" tabindex="0">
+
+    <div class="disclaimer-banner" role="note" aria-label="Aviso importante">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z" fill="#c9a000"/>
+        <path d="M7.25 6.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V6.5ZM8 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" fill="#c9a000"/>
+      </svg>
+      <span>
+        O processamento ocorre <strong>localmente no seu navegador</strong>. Nenhum dado é enviado para servidores.
+        <strong>Revise sempre a saída com o laudo original</strong> antes de utilizar em prontuário ou conduta clínica.
+      </span>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Texto bruto do laudo</p>
+      <p class="section-desc">
+        Copie o conteúdo do laudo laboratorial do IAMSPE e cole abaixo. Pode incluir múltiplos exames e datas.
+      </p>
+
+      <label for="input-laudo">
+        Laudo copiado do IAMSPE<span class="req" aria-hidden="true">*</span>
+      </label>
+      <textarea
+        id="input-laudo"
+        name="laudo"
+        aria-required="true"
+        aria-describedby="input-desc"
+        placeholder="Cole aqui o texto copiado do laudo do IAMSPE…&#10;&#10;Exemplo:&#10;HEMOGRAMA,SANGUE&#10;Coletado em: 03/05/2023 07:30 Liberado em: 03/05/2023 10:45&#10;…"
+        spellcheck="false"
+        autocomplete="off"
+      ></textarea>
+      <p id="input-desc" style="font-size:.78rem;color:var(--texto-suave);margin-top:.3rem;">
+        Aceita múltiplos exames e blocos. O parser identifica e agrupa automaticamente por data de coleta.
+      </p>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-processar" type="button">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <path d="M7.5 1a6.5 6.5 0 1 0 0 13A6.5 6.5 0 0 0 7.5 1ZM0 7.5a7.5 7.5 0 1 1 15 0 7.5 7.5 0 0 1-15 0Z" fill="currentColor"/>
+            <path d="M5.5 5.25a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0v-4.5ZM11 7.5a.75.75 0 0 0-.75-.75H6.5a.75.75 0 0 0 0 1.5h3.75A.75.75 0 0 0 11 7.5Z" fill="currentColor"/>
+          </svg>
+          Processar
+        </button>
+        <button class="btn btn-secondary" id="btn-exemplo" type="button">Carregar exemplo</button>
+        <button class="btn btn-danger" id="btn-limpar" type="button">Limpar</button>
+      </div>
+    </div>
+
+    <!-- STATUS -->
+    <div class="status-area" aria-live="polite" aria-atomic="true">
+      <div class="msg msg-error"   id="msg-error"   role="alert"></div>
+      <div class="msg msg-warn"    id="msg-warn"    role="status"></div>
+      <div class="msg msg-success" id="msg-success" role="status"></div>
+      <div class="msg msg-info"    id="msg-info"    role="status"></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="output-section" id="output-section" hidden>
+      <div class="card">
+        <div class="output-label-row">
+          <label for="output-box" style="margin-bottom:0;">Saída padronizada</label>
+          <button class="btn btn-copy" id="btn-copiar" type="button" disabled aria-disabled="true">
+            Copiar saída
+          </button>
+        </div>
+        <div
+          id="output-box"
+          class="output-box"
+          role="region"
+          aria-label="Saída padronizada dos exames"
+          aria-live="polite"
+        ></div>
+        <p style="font-size:.76rem;color:var(--texto-suave);margin-top:.5rem;">
+          Selecione o texto acima para copiar manualmente, ou use o botão "Copiar saída".
+        </p>
+      </div>
+    </div>
+  </div><!-- /panel-processar -->
+
+
+  <!-- ═══ ABA 2: COMO USAR ════════════════════════════════════ -->
+  <div role="tabpanel" id="panel-como-usar" aria-labelledby="tab-como-usar" tabindex="0">
+
+    <div class="card">
+      <p class="section-title">Passo a passo</p>
+      <p class="section-desc">Como utilizar a ferramenta de padronização de exames do IAMSPE.</p>
+
+      <ol class="step-list" aria-label="Passo a passo de uso">
+        <li>Acesse o sistema de laudos do IAMSPE e selecione os resultados laboratoriais do paciente.</li>
+        <li>Copie o texto completo do laudo — pode incluir múltiplos exames e datas diferentes no mesmo bloco.</li>
+        <li>Volte para a aba <strong>Processar Exames</strong> e cole o texto no campo principal.</li>
+        <li>Clique em <strong>Processar</strong>. A ferramenta irá identificar, agrupar e formatar os exames automaticamente.</li>
+        <li><strong>Revise a saída com atenção</strong>, comparando com o laudo original. Erros de extração podem ocorrer.</li>
+        <li>Clique em <strong>Copiar saída</strong> e utilize o texto resultante conforme necessário.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Formato de entrada esperado</p>
+      <p class="section-desc">O parser é projetado para o formato padrão dos laudos do IAMSPE. Exemplo típico:</p>
+      <div class="example-block" role="region" aria-label="Exemplo de entrada">HEMOGRAMA,SANGUE
+Coletado em: 03/05/2023 07:30 Liberado em: 03/05/2023 10:45
+Resultado Valores de referência Método
+
+ERITROGRAMA
+Hemoglobina 14,1 g/dL 13,0-17,5 Fotométrico
+Hematócrito 43,5 % 40,0-52,0
+VCM 94,9 fL 80,0-100,0
+HCM 30,9 pg 26,0-34,0
+CHCM 32,6 g/dL 31,0-37,0
+RDW-CV 13,7 % 11,5-14,5
+
+LEUCOGRAMA
+Leucócitos 7,20 mil/mm³ 4,00-11,00
+Neutrófilos 69,10 % 4,97 mil/mm³
+Eosinófilos 0,92 % 0,07 mil/mm³
+Basófilos 0,51 % 0,04 mil/mm³
+Linfócitos 25,68 % 1,85 mil/mm³
+Monócitos 3,74 % 0,27 mil/mm³
+
+PLAQUETAS
+Plaquetas 269 mil/mm³ 150-400
+
+Resultados anteriores:
+[dados anteriores — ignorados pelo parser]
+
+GLICOSE, SANGUE
+Coletado em: 03/05/2023 07:30 Liberado em: 03/05/2023 09:15
+Resultado Valores de referência Método
+85 mg/dL 70-99</div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Formato de saída gerado</p>
+      <p class="section-desc">A saída é um bloco de texto compacto, pronto para colar em evolução clínica:</p>
+      <div class="example-block" role="region" aria-label="Exemplo de saída">#LABS:
+03/05/2023: Hb 14,1 / Ht 43,5 / VCM 94,9 / HCM 30,9 / CHCM 32,6 / RDW 13,7 / LEUCO 7,20 (neut. 4,97 / eos. 0,07 / baso 0,04 / linf. 1,85 / mono 0,27) / PLQ 269 / GLIC 85</div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Notas importantes</p>
+      <ul style="font-size:.875rem;color:var(--texto-suave);line-height:1.7;padding-left:1.2rem;">
+        <li>Exames com data ausente ou não reconhecida serão ignorados.</li>
+        <li>Se um exame não estiver presente em determinada data, ele é simplesmente omitido da linha.</li>
+        <li>A ordem dos exames na saída é sempre fixa, independente da ordem no laudo original.</li>
+        <li>Valores são apresentados sem unidade e sem intervalo de referência.</li>
+        <li>Para o leucograma, são usados valores absolutos quando disponíveis. Se ausentes, calcula-se a partir do percentual e do leucócito total.</li>
+        <li><strong>Não compartilhe laudos com dados identificáveis em ambientes não seguros.</strong></li>
+      </ul>
+    </div>
+
+  </div><!-- /panel-como-usar -->
+
+
+  <!-- ═══ ABA 3: AVISOS ════════════════════════════════════════ -->
+  <div role="tabpanel" id="panel-avisos" aria-labelledby="tab-avisos" tabindex="0">
+
+    <div class="card aviso-card">
+
+      <h2>Finalidade da ferramenta</h2>
+      <p>
+        Esta ferramenta tem <strong>finalidade exclusivamente operacional de apoio</strong> à organização de dados laboratoriais.
+        Ela foi desenvolvida para facilitar a padronização textual de resultados já disponíveis no prontuário,
+        sem qualquer função diagnóstica ou terapêutica.
+      </p>
+
+      <h2>Ausência de interpretação clínica</h2>
+      <p>
+        A ferramenta <strong>não interpreta, não analisa e não emite nenhum julgamento clínico</strong> sobre os valores
+        apresentados. Não há alertas automáticos de normalidade ou anormalidade. A responsabilidade pela
+        interpretação dos resultados é exclusivamente do profissional de saúde habilitado.
+      </p>
+
+      <h2>Possibilidade de erros</h2>
+      <p>
+        Erros de extração, padronização, cálculo, agrupamento ou omissão <strong>podem ocorrer</strong>, especialmente
+        em laudos com formatação atípica, caracteres especiais, colagens incompletas ou variações no padrão
+        do sistema de origem. O resultado gerado não substitui o laudo original.
+      </p>
+
+      <h2>Obrigatoriedade de conferência</h2>
+      <p>
+        <strong>Sempre confira o resultado final com o documento original</strong> antes de utilizá-lo em prontuário,
+        conduta assistencial, discussão de caso, comunicação clínica ou qualquer outra finalidade.
+        O uso sem revisão adequada é de responsabilidade exclusiva do usuário.
+      </p>
+
+      <h2>Privacidade e segurança de dados</h2>
+      <p>
+        O processamento ocorre <strong>integralmente no navegador do usuário</strong>. Nenhum dado é transmitido para
+        servidores externos, coletado, armazenado ou registrado por esta aplicação. Ainda assim, recomenda-se
+        atenção ao uso em dispositivos compartilhados e ao compartilhamento de laudos com dados identificáveis.
+      </p>
+
+      <h2>Limitação de responsabilidade</h2>
+      <p>
+        O desenvolvedor e os mantenedores desta ferramenta <strong>não garantem ausência de erros</strong> e
+        não assumem responsabilidade por danos decorrentes do uso sem conferência adequada, uso em contexto
+        clínico sem revisão humana, ou interpretação incorreta dos dados gerados.
+      </p>
+      <p>
+        Esta ferramenta é disponibilizada como apoio técnico operacional. O uso pressupõe revisão humana final
+        por profissional competente.
+      </p>
+
+      <h2>Versão atual</h2>
+      <p>
+        <strong>v1.0</strong> — Contempla hemograma completo, bioquímica básica, perfil lipídico, função hepática,
+        metabolismo do ferro, tireoide e vitamina D. Exames fora deste escopo são ignorados na versão atual.
+      </p>
+
+    </div>
+  </div><!-- /panel-avisos -->
+
+</main>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <strong>Revise sempre a saída com o laudo original antes de utilizar.</strong><br>
+    IAMSPE Labs v1 · Ferramenta de apoio operacional · Processamento local · Sem backend
+  </div>
+</footer>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                   -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  PARSER IAMSPE — baseado no formato real dos laudos
+ *
+ *  Características do formato real observadas:
+ *  1. Cabeçalho institucional completo se REPETE antes de cada exame
+ *  2. Bloco começa com "NOME DO EXAME, MATERIAL" em caixa alta
+ *  3. Linha "Coletado em: dd/mm/aaaa hh:mm Liberado em: ..." 
+ *  4. Linha "Resultado Valores de referência Método" (cabeçalho de tabela)
+ *  5. Valor do resultado: linha começando com número (pode ter espaço líder)
+ *     ex: " 162 mg/dL ..." ou "7,1 mg/dL ..."
+ *  6. "Resultados anteriores:" marca fim do bloco útil
+ *  7. Hemograma: estrutura interna com ERITROGRAMA / LEUCOGRAMA / PLAQUETAS
+ *     - Plaquetas: "Resultados: 213 mil/mm³" (com "Resultados:")
+ *     - LEUCÓCITOS em maiúsculo, diferenciais: "63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³"
+ *  8. Responsável técnico (NOME\nCRF XXXXX) aparece como linha solta entre blocos
+ *  9. TFGE aparece como sub-bloco da creatinina sem "Coletado em:" → ignorar
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ─────────────────────────────────────────────────────────────
+   ALIASES: nome no laudo → chave interna
+   (normalizado: sem acento, minúsculo, espaço simples)
+───────────────────────────────────────────────────────────── */
+const ALIASES = {
+  // Hemograma / eritrograma
+  "hemoglobina":                          "Hb",
+  "hematócrito":                          "Ht",
+  "hematocrito":                          "Ht",
+  "vcm":                                  "VCM",
+  "hcm":                                  "HCM",
+  "chcm":                                 "CHCM",
+  "rdw-cv":                               "RDW",
+  "rdw":                                  "RDW",
+  // Leucograma
+  "leucócitos":                           "LEUCO",
+  "leucocitos":                           "LEUCO",
+  "leucócito":                            "LEUCO",
+  "leucocito":                            "LEUCO",
+  "neutrófilos":                          "neut",
+  "neutrofilos":                          "neut",
+  "neutrófilo":                           "neut",
+  "neutrofilo":                           "neut",
+  "eosinófilos":                          "eos",
+  "eosinofilos":                          "eos",
+  "eosinófilo":                           "eos",
+  "eosinofilo":                           "eos",
+  "basófilos":                            "baso",
+  "basofilos":                            "baso",
+  "basófilo":                             "baso",
+  "basofilo":                             "baso",
+  "linfócitos":                           "linf",
+  "linfocitos":                           "linf",
+  "linfócito":                            "linf",
+  "linfocito":                            "linf",
+  "monócitos":                            "mono",
+  "monocitos":                            "mono",
+  "monócito":                             "mono",
+  "monocito":                             "mono",
+  "plaquetas":                            "PLQ",
+  "plaqueta":                             "PLQ",
+  // Bioquímica
+  "glicose":                              "GLIC",
+  "glicemia":                             "GLIC",
+  "uréia":                                "U",
+  "ureia":                                "U",
+  "creatinina":                           "CR",
+  "cálcio":                               "Ca",
+  "calcio":                               "Ca",
+  "ácido úrico":                          "AcUrico",
+  "acido urico":                          "AcUrico",
+  // Hepático
+  "aspartato amino transferase":          "TGO",
+  "aspartato aminotransferase":           "TGO",
+  "tgo":                                  "TGO",
+  "ast":                                  "TGO",
+  "alanino amino transferase":            "TGP",
+  "alanino aminotransferase":             "TGP",
+  "tgp":                                  "TGP",
+  "alt":                                  "TGP",
+  // Lipídios
+  "colesterol total":                     "CT",
+  "colesterol hdl":                       "HDL",
+  "hdl":                                  "HDL",
+  "colesterol ldl":                       "LDL",
+  "ldl":                                  "LDL",
+  "colesterol vldl":                      "VLDL",
+  "vldl":                                 "VLDL",
+  "colesterol não hdl":                   "NHDL",
+  "colesterol nao hdl":                   "NHDL",
+  "não hdl":                              "NHDL",
+  "nao hdl":                              "NHDL",
+  "triglicérides":                        "TG",
+  "triglicerides":                        "TG",
+  "triglicerídeos":                       "TG",
+  "triglicerideos":                       "TG",
+  // Ferro
+  "ferro":                                "Fe",
+  "capacidade total de ligação de ferro": "CTLF",
+  "capacidade total de ligacao de ferro": "CTLF",
+  "capacidade total ligação de ferro":    "CTLF",
+  "capacidade total ligacao de ferro":    "CTLF",
+  "índice de saturação de transferrina":  "SatTransf",
+  "indice de saturacao de transferrina":  "SatTransf",
+  "saturação de transferrina":            "SatTransf",
+  "saturacao de transferrina":            "SatTransf",
+  "ferritina":                            "Ferritina",
+  // Vitaminas / B12
+  "vitamina b12":                         "B12",
+  "vitamina b 12":                        "B12",
+  "cobalamina":                           "B12",
+  // Tireoide
+  "triiodotironina":                      "T3",
+  "t3 total":                             "T3",
+  "t3":                                   "T3",
+  "tiroxina livre":                       "T4L",
+  "t4 livre":                             "T4L",
+  "t4l":                                  "T4L",
+  "hormônio tireotrófico":               "TSH",
+  "hormonio tireotrof":                   "TSH",
+  "tsh":                                  "TSH",
+  // Vitamina D
+  "25 oh vitamina d":                     "VitD",
+  "25-oh vitamina d":                     "VitD",
+  "25oh vitamina d":                      "VitD",
+  "vitamina d":                           "VitD",
+  "vitamina d total":                     "VitD",
+  "25-hidroxivitamina d":                 "VitD",
+  "25 hidroxivitamina d":                 "VitD",
+};
+
+/* ─── Ordem fixa de saída ────────────────────────────────────── */
+const OUTPUT_ORDER = [
+  "Hb","Ht","VCM","HCM","CHCM","RDW",
+  "LEUCO", // -> inline: neut, eos, baso, linf, mono
+  "PLQ",
+  "GLIC","U","CR","Ca","TGO","TGP",
+  "CT","HDL","LDL","VLDL","NHDL","TG",
+  "AcUrico",
+  "Fe","CTLF","SatTransf",
+  "T3","T4L","TSH",
+  "Ferritina","B12","VitD",
+];
+const LEUCO_SUBS = ["neut","eos","baso","linf","mono"];
+const LEUCO_LABELS = { neut:"neut.", eos:"eos.", baso:"baso", linf:"linf.", mono:"mono" };
+
+/* ─── Texto de exemplo (formato real IAMSPE) ──────────────────── */
+const EXEMPLO = `HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Diretor Técnico: Dra. Patricia Mantovani - CRF-SP: 20292
+Nº CEVS: 355030890-861-014006-1-4 CRF-SP:61205
+Av. Ibirapuera 981 - Indianópolis - 04029-000 - São Paulo - SP
+Emissão: 17/03/2025-14:24
+Pedido: 250061912
+Prontuário: 1593518 Paciente: CARLOS ALBERTO CORREA SILVA
+Data Nasc.: 06/06/1962 Sexo:M Idade: 62a 9m 11d Data Solicitação: 26/02/2025 - 07:13
+Solicitante: Dr.(a): LUIZ GUSTAVO MENDEZ GONZALEZ DE OLIVEIRA - CRM N°: 100079
+Setor solicitante: REDE CREDENCIADA - CONSULTAS MEDICAS
+Responsável: MARISA TAMIKO OGURA - CRF: 16933
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+HEMOGRAMA,SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 10:51
+ERITROGRAMA
+Resultados Valores de referência Metodologia
+Eritrócitos 5,21 milhões/mm³ 4,40 a 5,70 milhões/mm³ Automatizada
+Hemoglobina 16,1 g/dL 13,0 a 18,0 g/dL morfológico quando aplicável
+Hematócrito 49,3 % 40,0 a 52,0 %
+VCM 94,6 fL 80,0 a 100,0 fL
+HCM 30,9 pg 27,0 a 32,0 pg
+CHCM 32,7 g/dL 32,0 a 37,0 g/dL
+RDW-CV 14,9 % 9,5 a 14,8 %
+LEUCOGRAMA
+Resultados Valores de referência Metodologia
+LEUCÓCITOS 6,06 mil/mm³ 4,00 a 11,00 mil/mm³ Automatizada
+Neutrófilos 63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³
+Eosinófilos 2,50 % 0,15 mil/mm³ 0,05 a 0,50 mil/mm³
+Basófilos 0,40 % 0,02 mil/mm³ 0,00 a 0,10 mil/mm³
+Linfócitos 24,30 % 1,47 mil/mm³ 0,90 a 2,90 mil/mm³
+Monócitos 9,00 % 0,55 mil/mm³ 0,30 a 0,90 mil/mm³
+PLAQUETAS Valores de referência Metodologia
+Resultados: 213 mil/mm³ 150 a 400 mil/mm³ Automatizada
+MARISA TAMIKO OGURA
+CRF 16933
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: VITOR HUGO CARVALHO DA SILVA - CRF: 77862
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+ÁCIDO ÚRICO, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em:26/02/2025 12:29
+Resultado Valores de referência Método
+7,1 mg/dL 3,5 a 7,2 mg/dL Enzimático colorimétrico
+Resultados anteriores:
+VITOR HUGO CARVALHO DA SILVA
+CRF 77862
+COLESTEROL TOTAL, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
+Resultado Valores de referência Método
+ 162 mg/dL Desejável: < 190 mg/dL Enzimático colorimétrico
+Resultados anteriores:
+VITOR HUGO CARVALHO DA SILVA
+CRF 77862
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: ERIK ROGERIO FANTINATI - CRF: 16999
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+COLESTEROL HDL, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+54 mg/dL Desejável: > 40 mg/dL Enzimático colorimétrico
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+COLESTEROL LDL, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+92 mg/dL Calculado - Fórmula de Martin
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+COLESTEROL VLDL, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+16 mg/dL Calculado - Fórmula de Martin
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+COLESTEROL NÃO HDL, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+108 mg/dL Calculado
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+TRIGLICÉRIDES, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+71 mg/dL Desejável: < 150 mg/dL Enzimático
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: VITOR HUGO CARVALHO DA SILVA - CRF: 77862
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+GLICOSE, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
+Resultado Valores de referência Método
+73 mg/dL 75 a 99 mg/dL Enzimático
+Resultados anteriores:
+86 (19/04/2018)
+VITOR HUGO CARVALHO DA SILVA
+CRF 77862
+URÉIA, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
+Resultado Valores de referência Método
+28 mg/dL 17 a 43 mg/dL Enzimático
+Resultados anteriores:
+35 (19/04/2018)
+VITOR HUGO CARVALHO DA SILVA
+CRF 77862
+CREATININA, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:43
+Resultado Valores de referência Método
+1,44 mg/dL 0,80 a 1,40 mg/dL Colorimétrico
+Resultados anteriores:
+VITOR HUGO CARVALHO DA SILVA
+CRF 77862
+TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)
+Resultado Valores de referência* Método
+TFGE para etnia negra: 60 mL/min/1,73m2 >90 mL/min/1,73m2 Fórmula CKD-EPI
+TGFE para outras etnias: 52 mL/min/1,73m2
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: ERIK ROGERIO FANTINATI - CRF: 16999
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+ASPARTATO AMINO TRANSFERASE (TGO), SANGUE
+Coletado em:26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+18 U/L 13 a 39 U/L Enzimático
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+ALANINO AMINO TRANSFERASE (TGP), SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
+Resultado Valores de referência Método
+13 U/L 0 a 50 U/L Enzimático
+Resultados anteriores:
+ERIK ROGERIO FANTINATI
+CRF 16999
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: VITOR HUGO CARVALHO DA SILVA - CRF: 77862
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+FERRO, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
+Resultado Valores de referência Método
+155 µg/dL 70 a 180 µg/dL Colorimétrico
+Resultados anteriores:
+VITOR HUGO CARVALHO DA SILVA
+CRF 77862
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: ELIZA YOKO YOSHIDA - CRF: 6286
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+TIROXINA LIVRE (T4L), SANGUE
+Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 12:25
+Resultado Valores de referência Método
+0,77 ng/dl 0,61 a 1,12 ng/dl Quimioluminescência
+Resultados anteriores:
+ELIZA YOKO YOSHIDA
+CRF 6286
+HORMÔNIO TIREOTRÓFICO (TSH), SANGUE
+Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 12:25
+Resultado Valores de referência Método
+ 1,22 µUI/ml 0,34 a 5,33 µUI/ml Quimioluminescência
+Resultados anteriores:
+ELIZA YOKO YOSHIDA
+CRF 6286
+FERRITINA, SANGUE
+Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 12:25
+Resultado Valores de referência Método
+20,0 ng/ml Homens: 23,9 a 336,2 ng/ml Quimioluminescência
+Resultados anteriores:
+ELIZA YOKO YOSHIDA
+CRF 6286
+VITAMINA B12, SANGUE
+Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 10:52
+Resultado Valores de referência Método
+396 pg/ml 180 a 914 pg/ml Quimioluminescência
+Resultados anteriores:
+ELIZA YOKO YOSHIDA
+CRF 6286
+HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Responsável: MARIZA DONISETI DE OLIVEIRA - CRF: 19036
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+25 OH VITAMINA D, SANGUE
+Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 11:05
+Resultado Valores de referência Método
+61,7 ng/mL < 10,0 ng/mL Deficiência CMIA
+Resultados anteriores:
+45,3 (19/04/2018)
+MARIZA DONISETI DE OLIVEIRA
+CRF 19036
+___________________________________________________________________________________________________________________`;
+
+/* ══════════════════════════════════════════════════════════════
+   PARSER — calibrado para o formato real dos laudos do IAMSPE
+══════════════════════════════════════════════════════════════ */
+
+/**
+ * ETAPA 0 — Remove o cabeçalho institucional repetido.
+ * O cabeçalho aparece antes de cada exame e contém linhas
+ * como "HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL", endereço,
+ * pedido, prontuário, solicitante, disclaimer, CRF, nome do responsável.
+ * Estratégia: remover essas linhas antes de segmentar blocos.
+ */
+function removeInstitutionalNoise(text) {
+  const noisePatterns = [
+    /^HOSPITAL DO SERVIDOR.*/i,
+    /^SERVIÇO DE LABORATÓRIO.*/i,
+    /^Diretor Técnico:.*/i,
+    /^Nº CEVS:.*/i,
+    /^Av\..*/i,
+    /^Emissão:.*/i,
+    /^Pedido:.*/i,
+    /^Prontuário:.*/i,
+    /^Data Nasc\..*/i,
+    /^Solicitante:.*/i,
+    /^Setor solicitante:.*/i,
+    /^Responsável:.*/i,
+    /^Os resultados dos exames.*/i,
+    /^A interpretação correta.*/i,
+    /^análise conjunta.*/i,
+    /^e deve ser feita.*/i,
+    /^_{5,}/,                          // linhas de sublinhado ___
+    /^-{5,}/,                          // linhas de traço ---
+    /^CRF\s*[-:]?\s*\d+$/i,           // "CRF 39952" solto
+    /^CRM\s*[-:]?\s*\d+$/i,
+  ];
+
+  // Também remove linhas que são apenas nome do responsável (NOME SOBRENOME em caps)
+  // seguido de linha "CRF XXXXX" — detecta o par
+  const lines = text.split("\n");
+  const cleaned = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    // Par: linha toda em maiúsculas (nome) + próxima é "CRF \d+"
+    if (
+      i + 1 < lines.length &&
+      /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s]+$/.test(line) &&
+      line.length > 5 &&
+      /^CRF\s+\d+/i.test(lines[i + 1].trim())
+    ) {
+      i += 2; // pula nome + CRF
+      continue;
+    }
+    const isNoise = noisePatterns.some(p => p.test(line));
+    if (!isNoise) cleaned.push(lines[i]);
+    i++;
+  }
+  return cleaned.join("\n");
+}
+
+/** ETAPA 1 — Sanitização básica */
+function sanitizeRawText(raw) {
+  let t = raw;
+  t = t.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  t = t.split("\n").map(l => l.replace(/[ \t]+/g, " ")).join("\n");
+  t = t.replace(/\n{3,}/g, "\n\n");
+  return t;
+}
+
+/** ETAPA 2 — Segmentação em blocos de exame.
+ *
+ *  Um bloco começa quando encontramos uma linha que é cabeçalho de exame:
+ *  - Em CAIXA ALTA (≥70% das letras)
+ *  - Contém vírgula separando nome do material
+ *  - Exemplos: "HEMOGRAMA,SANGUE", "ÁCIDO ÚRICO, SANGUE",
+ *              "ASPARTATO AMINO TRANSFERASE (TGO), SANGUE"
+ *              "25 OH VITAMINA D, SANGUE"
+ *
+ *  Exceção: "TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)" não tem
+ *  "Coletado em" → será descartado no parser (sem data).
+ */
+function splitIntoExamBlocks(cleanText) {
+  const lines = cleanText.split("\n");
+  const blocks = [];
+  let current = [];
+
+  const isExamHeader = (line) => {
+    const s = line.trim();
+    if (!s.includes(",")) return false;
+
+    // A parte antes da primeira vírgula deve ser o nome do exame (sem números)
+    const beforeComma = s.split(",")[0].trim();
+    if (beforeComma.length < 3) return false;
+
+    // Rejeitar imediatamente se começa com número (ex: "94,6 fL..." — vírgula decimal)
+    // Exceção: nomes que começam com dígito de nomenclatura (ex: "25 OH VITAMINA D")
+    if (/^\d/.test(beforeComma) && !/^\d+\s+[A-Za-z]/.test(beforeComma)) return false;
+
+    // Rejeitar se o nome contém vírgula decimal — indica valor numérico, não nome de exame
+    // ex: "94,6 fL" → vírgula entre dígitos → não é nome de exame
+    // Remove parênteses antes de checar (ex: "(T4L)", "(TGO)" são parte do nome)
+    const bcNoParen = beforeComma.replace(/\(.*?\)/g, "").trim();
+    if (/\d[,.]\d/.test(bcNoParen)) return false;
+
+    // A parte após a primeira vírgula DEVE ser material biológico reconhecível
+    // Isso é a distinção mais confiável: "GLICOSE, SANGUE" → após vírgula = "SANGUE"
+    const afterComma = s.split(",").slice(1).join(",").trim();
+    if (!/^(sangue|soro|urina|plasma|lcr|escarro|fezes|swab|liquor|liquido|medula)/i.test(afterComma)) return false;
+
+    // Maiúsculas: ≥65% das letras do nome devem ser maiúsculas
+    const letters = beforeComma.replace(/[^a-zA-ZÀ-ÿ]/g, "");
+    if (letters.length < 2) return false;
+    const upper = letters.replace(/[^A-ZÀÁÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/g, "").length;
+    return (upper / letters.length) >= 0.65;
+  };
+
+  for (const line of lines) {
+    if (isExamHeader(line)) {
+      if (current.length > 0) blocks.push(current.join("\n"));
+      current = [line];
+    } else {
+      current.push(line);
+    }
+  }
+  if (current.length > 0) blocks.push(current.join("\n"));
+  return blocks.filter(b => b.trim().length > 5);
+}
+
+/** ETAPA 3 — Extrai data de coleta */
+function extractCollectionDate(block) {
+  const m = block.match(/coletado\s+em\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  return m ? m[1] : null;
+}
+
+/** Converte dd/mm/aaaa → aaaa-mm-dd para ordenação */
+function dateToSortKey(dmy) {
+  if (!dmy) return "";
+  const [d, m, a] = dmy.split("/");
+  return `${a}-${m}-${d}`;
+}
+
+/** Normaliza string para busca de alias (sem acento, minúsculo, espaço simples) */
+function normalizeKey(str) {
+  return str
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Resolve alias pelo dicionário */
+function resolveAlias(raw) {
+  const nk = normalizeKey(raw);
+  if (ALIASES[nk]) return ALIASES[nk];
+  // Match de prefixo longo (para nomes compostos)
+  let bestMatch = null;
+  let bestLen = 0;
+  for (const [key, val] of Object.entries(ALIASES)) {
+    if (nk.startsWith(key) && key.length > bestLen) {
+      bestMatch = val;
+      bestLen = key.length;
+    }
+  }
+  return bestMatch;
+}
+
+/** Extrai o primeiro número válido de uma string (formato BR: vírgula decimal) */
+function extractFirstNumber(str) {
+  // Ignora ranges como "4,00-11,00" ou "13,0-17,5"
+  // Pega o primeiro token numérico isolado
+  const tokens = str.trim().split(/\s+/);
+  for (const tok of tokens) {
+    // Número simples: dígitos com vírgula ou ponto decimal, sem traço no meio
+    if (/^\d+([,\.]\d+)?$/.test(tok)) return tok.replace(".", ",");
+    // Número com espaço líder já tratado pelo trim
+  }
+  // Fallback: regex mais ampla
+  const m = str.match(/(?<![,\d-])(\d+(?:,\d+)?)(?![,\d-])/);
+  return m ? m[1] : null;
+}
+
+/* ─── Parser do HEMOGRAMA ─────────────────────────────────────── */
+/*
+ * Formato real observado:
+ *   ERITROGRAMA
+ *   Hemoglobina 16,1 g/dL 13,0 a 18,0 g/dL morfológico...
+ *   LEUCOGRAMA
+ *   LEUCÓCITOS 6,06 mil/mm³ 4,00 a 11,00 mil/mm³ Automatizada...
+ *   Neutrófilos 63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³
+ *   PLAQUETAS Valores de referência Metodologia
+ *   Resultados: 213 mil/mm³ 150 a 400 mil/mm³ Automatizada
+ */
+function parseHemogramaBlock(block) {
+  const result = {};
+  const lines = block.split("\n");
+  let inResultados = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Parar em "Resultados anteriores"
+    if (/resultados\s+anteriores/i.test(line)) { inResultados = true; }
+    if (inResultados) continue;
+
+    // Skip linhas de seção interna ou cabeçalhos de tabela
+    if (/^(eritrograma|leucograma|plaquetas\s+valores|plaquetas\s*$|resultados?\s+valores|metodologia|automatizada|hemograma|coletado|liberado)/i.test(line)) continue;
+
+    // ── Caso especial: plaquetas com "Resultados: 213 mil/mm³"
+    if (/^resultados?\s*:/i.test(line)) {
+      const num = extractFirstNumber(line.replace(/^resultados?\s*:/i, "").trim());
+      if (num && !result["PLQ"]) result["PLQ"] = num;
+      continue;
+    }
+
+    // ── Tokenizar a linha
+    const tokens = line.split(/\s+/);
+    if (tokens.length < 2) continue;
+
+    // Encontrar onde termina o nome (primeiro token numérico)
+    let nameEnd = tokens.length;
+    for (let i = 0; i < tokens.length; i++) {
+      if (/^\d+([,\.]\d+)?$/.test(tokens[i])) { nameEnd = i; break; }
+    }
+    if (nameEnd === 0 || nameEnd >= tokens.length) continue;
+
+    const namePart = tokens.slice(0, nameEnd).join(" ");
+    const key = resolveAlias(namePart);
+    if (!key) continue;
+
+    // Coletar todos os números isolados da parte de valor
+    const valuePart = tokens.slice(nameEnd);
+    const nums = [];
+    for (const tok of valuePart) {
+      if (/^\d+([,\.]\d+)?$/.test(tok)) {
+        nums.push(tok.replace(".", ","));
+      }
+    }
+    if (nums.length === 0) continue;
+
+    if (key === "PLQ") {
+      if (!result["PLQ"]) result["PLQ"] = nums[0];
+      continue;
+    }
+
+    if (key === "LEUCO") {
+      if (!result["LEUCO"]) result["LEUCO"] = nums[0];
+      continue;
+    }
+
+    // Diferenciais: formato "63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³"
+    // nums[0] = percentual, nums[1] = absoluto (se existir)
+    if (LEUCO_SUBS.includes(key)) {
+      if (nums.length >= 2) {
+        // Preferir absoluto
+        result[key] = nums[1];
+      } else {
+        // Só percentual → guardar para calcular depois
+        if (!result[`${key}_pct`]) result[`${key}_pct`] = nums[0];
+      }
+      continue;
+    }
+
+    // Demais (Hb, Ht, VCM, HCM, CHCM, RDW)
+    if (!result[key]) result[key] = nums[0];
+  }
+
+  // Fallback: calcular absolutos a partir de percentuais
+  if (result["LEUCO"]) {
+    const leucoFloat = parseFloat(result["LEUCO"].replace(",", "."));
+    for (const sub of LEUCO_SUBS) {
+      if (!result[sub] && result[`${sub}_pct`]) {
+        const pct = parseFloat(result[`${sub}_pct`].replace(",", "."));
+        const abs = (leucoFloat * pct / 100).toFixed(2).replace(".", ",");
+        result[sub] = abs;
+      }
+    }
+  }
+  for (const sub of LEUCO_SUBS) delete result[`${sub}_pct`];
+
+  return result;
+}
+
+/* ─── Parser do painel de Ligação de Ferro ───────────────────── */
+function parseIronBindingBlock(block) {
+  const result = {};
+  const lines = block.split("\n");
+  let inResultados = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (/resultados\s+anteriores/i.test(line)) { inResultados = true; }
+    if (inResultados) continue;
+    if (/capacidade\s+latente/i.test(line)) continue;
+
+    const tokens = line.split(/\s+/);
+    let nameEnd = tokens.length;
+    for (let i = 0; i < tokens.length; i++) {
+      if (/^\d+([,\.]\d+)?$/.test(tokens[i])) { nameEnd = i; break; }
+    }
+    if (nameEnd === 0 || nameEnd >= tokens.length) continue;
+
+    const namePart = tokens.slice(0, nameEnd).join(" ");
+    const key = resolveAlias(namePart);
+    if (!key) continue;
+
+    const num = extractFirstNumber(tokens.slice(nameEnd).join(" "));
+    if (num && !result[key]) result[key] = num;
+  }
+  return result;
+}
+
+/* ─── Parser genérico para exames simples ─────────────────────── */
+/*
+ * Formato real:
+ *   COLESTEROL TOTAL, SANGUE        ← header (já extraído como blockKey)
+ *   Coletado em: ... Liberado em: ...
+ *   Resultado Valores de referência Método
+ *    162 mg/dL Desejável: < 190 ...   ← linha do resultado (pode ter espaço líder)
+ *   Resultados anteriores:            ← parar aqui
+ */
+function parseSimpleExamBlock(block) {
+  const result = {};
+  const lines = block.split("\n");
+
+  // Nome do exame = antes da primeira vírgula da primeira linha
+  const headerRaw = lines[0].trim().split(",")[0].trim();
+  // Remove parênteses e conteúdo: "ASPARTATO AMINO TRANSFERASE (TGO)" → "ASPARTATO AMINO TRANSFERASE"
+  const headerClean = headerRaw.replace(/\s*\(.*?\)\s*/g, " ").trim();
+  const blockKey = resolveAlias(headerClean);
+
+  let inResultados = false;
+  let gotValue = false;
+
+  for (let i = 1; i < lines.length; i++) {
+    const raw = lines[i];
+    const line = raw.trim();
+    if (!line) continue;
+
+    if (/resultados\s+anteriores/i.test(line)) { inResultados = true; }
+    if (inResultados) continue;
+
+    // Ignorar linhas de metadados e cabeçalhos de tabela
+    if (/^(coletado|liberado|resultado\s+valores|resultado\s*$|valores\s+de\s+refer|método|metodologia)/i.test(line)) continue;
+    // Ignorar linhas só de texto longo (valores de referência narrativos)
+    // Se a linha não começa com número nem com nome de sub-exame conhecido → provável texto de referência
+    // MAS só pular se já temos o valor principal
+    if (gotValue && !/^\d/.test(line) && !/^[A-ZÁÀÂÃÉÍÓÚa-z]/.test(line)) continue;
+
+    // ── Linha que começa com número: é o valor do resultado
+    if (/^\s*\d/.test(raw) && !gotValue && blockKey) {
+      const num = extractFirstNumber(line);
+      if (num) {
+        result[blockKey] = num;
+        gotValue = true;
+      }
+      continue;
+    }
+
+    // ── Linha com "Nome Valor ...": sub-exame no bloco (ex: painel lipídico, ferro)
+    if (!gotValue || !blockKey) {
+      const tokens = line.split(/\s+/);
+      let nameEnd = tokens.length;
+      for (let j = 0; j < tokens.length; j++) {
+        if (/^\d+([,\.]\d+)?$/.test(tokens[j])) { nameEnd = j; break; }
+      }
+      if (nameEnd > 0 && nameEnd < tokens.length) {
+        const namePart = tokens.slice(0, nameEnd).join(" ");
+        const key = resolveAlias(namePart);
+        if (key) {
+          const num = extractFirstNumber(tokens.slice(nameEnd).join(" "));
+          if (num && !result[key]) result[key] = num;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/* ─── Identificadores de tipo de bloco ──────────────────────── */
+function isHemograma(block) {
+  return /^hemograma\s*,/i.test(block.trim());
+}
+function isIronBinding(block) {
+  return /^capacidade\s+total\s+de\s+liga/i.test(block.trim());
+}
+
+/* ─── Merge por data ─────────────────────────────────────────── */
+function mergeByDate(parsedList) {
+  const byDate = {};
+  for (const { date, data } of parsedList) {
+    if (!date) continue;
+    if (!byDate[date]) byDate[date] = {};
+    // Não sobrescreve chaves já preenchidas (primeiro bloco de cada exame vence)
+    for (const [k, v] of Object.entries(data)) {
+      if (byDate[date][k] === undefined) byDate[date][k] = v;
+    }
+  }
+  return byDate;
+}
+
+/* ─── Formatação final ───────────────────────────────────────── */
+function formatLabsOutput(groupedByDate) {
+  const dates = Object.keys(groupedByDate).sort((a, b) =>
+    dateToSortKey(b).localeCompare(dateToSortKey(a))
+  );
+
+  const lines = ["#LABS:"];
+  for (const date of dates) {
+    const data = groupedByDate[date];
+    const parts = [];
+
+    for (const key of OUTPUT_ORDER) {
+      if (key === "LEUCO") {
+        if (!data["LEUCO"]) continue;
+        const subs = LEUCO_SUBS.filter(s => data[s]);
+        let str = `LEUCO ${data["LEUCO"]}`;
+        if (subs.length > 0) {
+          str += ` (${subs.map(s => `${LEUCO_LABELS[s]} ${data[s]}`).join(" / ")})`;
+        }
+        parts.push(str);
+      } else {
+        if (data[key] !== undefined) parts.push(`${key} ${data[key]}`);
+      }
+    }
+
+    if (parts.length > 0) lines.push(`${date}: ${parts.join(" / ")}`);
+  }
+
+  return lines.join("\n");
+}
+
+/* ─── Pipeline principal ─────────────────────────────────────── */
+function processLabText(raw) {
+  // 1. Sanitizar
+  const sanitized = sanitizeRawText(raw);
+  // 2. Remover ruído institucional
+  const clean = removeInstitutionalNoise(sanitized);
+  // 3. Segmentar
+  const blocks = splitIntoExamBlocks(clean);
+
+  const parsed = [];
+  let recognizedCount = 0;
+  let ignoredCount = 0;
+
+  for (const block of blocks) {
+    const date = extractCollectionDate(block);
+
+    // Blocos sem data (ex: TFGE) → ignorar silenciosamente
+    if (!date) { ignoredCount++; continue; }
+
+    let data = {};
+    if (isHemograma(block)) {
+      data = parseHemogramaBlock(block);
+    } else if (isIronBinding(block)) {
+      data = parseIronBindingBlock(block);
+    } else {
+      data = parseSimpleExamBlock(block);
+    }
+
+    const keys = Object.keys(data);
+    if (keys.length > 0) {
+      recognizedCount++;
+      parsed.push({ date, data });
+    } else {
+      ignoredCount++;
+    }
+  }
+
+  const grouped = mergeByDate(parsed);
+  const output = formatLabsOutput(grouped);
+
+  return {
+    output,
+    recognizedCount,
+    ignoredCount,
+    dateCount: Object.keys(grouped).length,
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UI
+══════════════════════════════════════════════════════════════ */
+
+const elInput    = document.getElementById("input-laudo");
+const elOutput   = document.getElementById("output-box");
+const elSection  = document.getElementById("output-section");
+const btnProc    = document.getElementById("btn-processar");
+const btnCopy    = document.getElementById("btn-copiar");
+const btnLimpar  = document.getElementById("btn-limpar");
+const btnExemplo = document.getElementById("btn-exemplo");
+const msgError   = document.getElementById("msg-error");
+const msgWarn    = document.getElementById("msg-warn");
+const msgSuccess = document.getElementById("msg-success");
+const msgInfo    = document.getElementById("msg-info");
+const liveRegion = document.getElementById("live-region");
+
+function hideAllMsgs() {
+  [msgError, msgWarn, msgSuccess, msgInfo].forEach(m => {
+    m.classList.remove("visible");
+    m.textContent = "";
+  });
+}
+
+function showMsg(el, text) {
+  hideAllMsgs();
+  el.textContent = text;
+  el.classList.add("visible");
+  liveRegion.textContent = text;
+}
+
+function announce(text) {
+  liveRegion.textContent = "";
+  requestAnimationFrame(() => { liveRegion.textContent = text; });
+}
+
+btnProc.addEventListener("click", () => {
+  const raw = elInput.value.trim();
+  if (!raw) {
+    showMsg(msgError, "Nenhum texto informado. Cole o conteúdo do laudo do IAMSPE no campo acima.");
+    elInput.focus();
+    return;
+  }
+
+  hideAllMsgs();
+
+  let result;
+  try {
+    result = processLabText(raw);
+  } catch (err) {
+    showMsg(msgError, `Erro interno no processamento: ${err.message}. Tente novamente ou reporte o problema.`);
+    return;
+  }
+
+  const hasOutput = result.output && result.output !== "#LABS:" && result.dateCount > 0;
+
+  if (!hasOutput) {
+    showMsg(msgError,
+      "Nenhum exame reconhecido no texto informado. " +
+      "Confira se o conteúdo foi copiado integralmente do laudo do IAMSPE."
+    );
+    elSection.hidden = true;
+    elOutput.classList.remove("visible");
+    btnCopy.disabled = true;
+    btnCopy.setAttribute("aria-disabled", "true");
+    return;
+  }
+
+  // Mostrar saída
+  elOutput.textContent = result.output;
+  elOutput.classList.add("visible");
+  elSection.hidden = false;
+  btnCopy.disabled = false;
+  btnCopy.setAttribute("aria-disabled", "false");
+
+  // Feedback
+  let warnText = "";
+  if (result.ignoredCount > 0) {
+    warnText = `${result.ignoredCount} bloco(s) não reconhecido(s) foram ignorados. Verifique se o texto está completo.`;
+  }
+
+  const successText = `${result.dateCount} data(s) encontrada(s) · ${result.recognizedCount} bloco(s) processado(s) com sucesso.`;
+  showMsg(msgSuccess, successText);
+  if (warnText) {
+    // Também mostra aviso
+    setTimeout(() => {
+      msgWarn.textContent = warnText;
+      msgWarn.classList.add("visible");
+    }, 100);
+  }
+
+  announce(`Exames processados. ${successText}`);
+  elSection.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+btnCopy.addEventListener("click", async () => {
+  const text = elOutput.textContent;
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    btnCopy.textContent = "✓ Copiado!";
+    announce("Saída copiada para a área de transferência.");
+    setTimeout(() => { btnCopy.textContent = "Copiar saída"; }, 2000);
+  } catch {
+    // Fallback
+    const range = document.createRange();
+    range.selectNodeContents(elOutput);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    announce("Selecione o texto e copie manualmente com Ctrl+C ou Cmd+C.");
+    showMsg(msgInfo, "Não foi possível copiar automaticamente. Selecione o texto e use Ctrl+C / Cmd+C.");
+  }
+});
+
+btnLimpar.addEventListener("click", () => {
+  elInput.value = "";
+  elOutput.textContent = "";
+  elOutput.classList.remove("visible");
+  elSection.hidden = true;
+  btnCopy.disabled = true;
+  btnCopy.setAttribute("aria-disabled", "true");
+  hideAllMsgs();
+  elInput.focus();
+  announce("Campo limpo.");
+});
+
+btnExemplo.addEventListener("click", () => {
+  elInput.value = EXEMPLO;
+  hideAllMsgs();
+  showMsg(msgInfo, "Exemplo carregado. Clique em Processar para ver o resultado.");
+  elInput.focus();
+  announce("Texto de exemplo carregado no campo principal.");
+});
+
+/* ─── Tabs ───────────────────────────────────────────────────── */
+const tabs   = Array.from(document.querySelectorAll("[role='tab']"));
+const panels = Array.from(document.querySelectorAll("[role='tabpanel']"));
+
+function activateTab(tab) {
+  tabs.forEach(t => {
+    const selected = t === tab;
+    t.setAttribute("aria-selected", String(selected));
+    t.tabIndex = selected ? 0 : -1;
+  });
+  panels.forEach(p => {
+    const active = p.id === tab.getAttribute("aria-controls");
+    p.classList.toggle("active", active);
+  });
+}
+
+tabs.forEach(tab => {
+  tab.addEventListener("click", () => activateTab(tab));
+  tab.addEventListener("keydown", e => {
+    let idx = tabs.indexOf(e.currentTarget);
+    if (e.key === "ArrowRight") { e.preventDefault(); idx = (idx + 1) % tabs.length; }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); idx = (idx - 1 + tabs.length) % tabs.length; }
+    else if (e.key === "Home") { e.preventDefault(); idx = 0; }
+    else if (e.key === "End") { e.preventDefault(); idx = tabs.length - 1; }
+    else return;
+    tabs[idx].focus();
+    activateTab(tabs[idx]);
+  });
+});
+</script>
+</body>
+</html>
