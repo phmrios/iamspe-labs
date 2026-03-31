@@ -646,832 +646,1135 @@ Resultado Valores de referência Método
 <script>
 "use strict";
 
-/*
- * ═══════════════════════════════════════════════════════════════
- *  PARSER IAMSPE — baseado no formato real dos laudos
- *
- *  Características do formato real observadas:
- *  1. Cabeçalho institucional completo se REPETE antes de cada exame
- *  2. Bloco começa com "NOME DO EXAME, MATERIAL" em caixa alta
- *  3. Linha "Coletado em: dd/mm/aaaa hh:mm Liberado em: ..." 
- *  4. Linha "Resultado Valores de referência Método" (cabeçalho de tabela)
- *  5. Valor do resultado: linha começando com número (pode ter espaço líder)
- *     ex: " 162 mg/dL ..." ou "7,1 mg/dL ..."
- *  6. "Resultados anteriores:" marca fim do bloco útil
- *  7. Hemograma: estrutura interna com ERITROGRAMA / LEUCOGRAMA / PLAQUETAS
- *     - Plaquetas: "Resultados: 213 mil/mm³" (com "Resultados:")
- *     - LEUCÓCITOS em maiúsculo, diferenciais: "63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³"
- *  8. Responsável técnico (NOME\nCRF XXXXX) aparece como linha solta entre blocos
- *  9. TFGE aparece como sub-bloco da creatinina sem "Coletado em:" → ignorar
- * ═══════════════════════════════════════════════════════════════
- */
+/* ═══════════════════════════════════════════════════════════════
+   IAMSPE LABS v2 — Parser calibrado para o formato real dos laudos
+   
+   Novidades v2:
+   - Eletrólitos: Na, K, Mg
+   - Coagulograma: TP (RNI), TTPA (razão)
+   - Hepático expandido: FAL, GGT, BilT/BilD/BilI, Amilase, Lipase
+   - Proteínas: Alb, ProtT, Glob
+   - HbA1c, CPK, PCR, VHS, CaI, PTH, Folato
+   - Sorologias qualitativas: HBsAg, HCV, HIV, Sífilis, FAN, Anti-*
+   - Microbiológicos: Cultura aeróbia/fungo/micobactéria, BAAR, Bacterioscopia
+   - Correção: cabeçalho institucional quebrado em múltiplas linhas
+   - Correção: "Coletado:" sem "em" (microbiológicos)
+   - Correção: CRBIO, CRM, CRA como conselhos profissionais
+   - Correção: nomes de exame multilinhas (culturas)
+   - Correção: resultado anterior na mesma linha (proteínas totais)
+═══════════════════════════════════════════════════════════════ */
 
-/* ─────────────────────────────────────────────────────────────
-   ALIASES: nome no laudo → chave interna
-   (normalizado: sem acento, minúsculo, espaço simples)
-───────────────────────────────────────────────────────────── */
-const ALIASES = {
-  // Hemograma / eritrograma
-  "hemoglobina":                          "Hb",
-  "hematócrito":                          "Ht",
-  "hematocrito":                          "Ht",
-  "vcm":                                  "VCM",
-  "hcm":                                  "HCM",
-  "chcm":                                 "CHCM",
-  "rdw-cv":                               "RDW",
-  "rdw":                                  "RDW",
-  // Leucograma
-  "leucócitos":                           "LEUCO",
-  "leucocitos":                           "LEUCO",
-  "leucócito":                            "LEUCO",
-  "leucocito":                            "LEUCO",
-  "neutrófilos":                          "neut",
-  "neutrofilos":                          "neut",
-  "neutrófilo":                           "neut",
-  "neutrofilo":                           "neut",
-  "eosinófilos":                          "eos",
-  "eosinofilos":                          "eos",
-  "eosinófilo":                           "eos",
-  "eosinofilo":                           "eos",
-  "basófilos":                            "baso",
-  "basofilos":                            "baso",
-  "basófilo":                             "baso",
-  "basofilo":                             "baso",
-  "linfócitos":                           "linf",
-  "linfocitos":                           "linf",
-  "linfócito":                            "linf",
-  "linfocito":                            "linf",
-  "monócitos":                            "mono",
-  "monocitos":                            "mono",
-  "monócito":                             "mono",
-  "monocito":                             "mono",
-  "plaquetas":                            "PLQ",
-  "plaqueta":                             "PLQ",
-  // Bioquímica
-  "glicose":                              "GLIC",
-  "glicemia":                             "GLIC",
-  "uréia":                                "U",
-  "ureia":                                "U",
-  "creatinina":                           "CR",
-  "cálcio":                               "Ca",
-  "calcio":                               "Ca",
-  "ácido úrico":                          "AcUrico",
-  "acido urico":                          "AcUrico",
-  // Hepático
-  "aspartato amino transferase":          "TGO",
-  "aspartato aminotransferase":           "TGO",
-  "tgo":                                  "TGO",
-  "ast":                                  "TGO",
-  "alanino amino transferase":            "TGP",
-  "alanino aminotransferase":             "TGP",
-  "tgp":                                  "TGP",
-  "alt":                                  "TGP",
-  // Lipídios
-  "colesterol total":                     "CT",
-  "colesterol hdl":                       "HDL",
-  "hdl":                                  "HDL",
-  "colesterol ldl":                       "LDL",
-  "ldl":                                  "LDL",
-  "colesterol vldl":                      "VLDL",
-  "vldl":                                 "VLDL",
-  "colesterol não hdl":                   "NHDL",
-  "colesterol nao hdl":                   "NHDL",
-  "não hdl":                              "NHDL",
-  "nao hdl":                              "NHDL",
-  "triglicérides":                        "TG",
-  "triglicerides":                        "TG",
-  "triglicerídeos":                       "TG",
-  "triglicerideos":                       "TG",
-  // Ferro
-  "ferro":                                "Fe",
-  "capacidade total de ligação de ferro": "CTLF",
-  "capacidade total de ligacao de ferro": "CTLF",
-  "capacidade total ligação de ferro":    "CTLF",
-  "capacidade total ligacao de ferro":    "CTLF",
-  "índice de saturação de transferrina":  "SatTransf",
-  "indice de saturacao de transferrina":  "SatTransf",
-  "saturação de transferrina":            "SatTransf",
-  "saturacao de transferrina":            "SatTransf",
-  "ferritina":                            "Ferritina",
-  // Vitaminas / B12
-  "vitamina b12":                         "B12",
-  "vitamina b 12":                        "B12",
-  "cobalamina":                           "B12",
-  // Tireoide
-  "triiodotironina":                      "T3",
-  "t3 total":                             "T3",
-  "t3":                                   "T3",
-  "tiroxina livre":                       "T4L",
-  "t4 livre":                             "T4L",
-  "t4l":                                  "T4L",
-  "hormônio tireotrófico":               "TSH",
-  "hormonio tireotrof":                   "TSH",
-  "tsh":                                  "TSH",
-  // Vitamina D
-  "25 oh vitamina d":                     "VitD",
-  "25-oh vitamina d":                     "VitD",
-  "25oh vitamina d":                      "VitD",
-  "vitamina d":                           "VitD",
-  "vitamina d total":                     "VitD",
-  "25-hidroxivitamina d":                 "VitD",
-  "25 hidroxivitamina d":                 "VitD",
+/* ─── ALIASES internos do hemograma ──────────────────────────── */
+const ALIASES_HEMO = {
+  "hemoglobina": "Hb", "hematocrito": "Ht",
+  "vcm": "VCM", "hcm": "HCM", "chcm": "CHCM",
+  "rdw-cv": "RDW", "rdw": "RDW",
+  "leucocitos": "LEUCO", "leucocito": "LEUCO",
+  "neutrofilos": "neut", "neutrofilo": "neut",
+  "eosinofilos": "eos", "eosinofilo": "eos",
+  "basofilos": "baso", "basofilo": "baso",
+  "linfocitos": "linf", "linfocito": "linf",
+  "monocitos": "mono", "monocito": "mono",
+  "plaquetas": "PLQ", "plaqueta": "PLQ",
 };
 
-/* ─── Ordem fixa de saída ────────────────────────────────────── */
-const OUTPUT_ORDER = [
-  "Hb","Ht","VCM","HCM","CHCM","RDW",
-  "LEUCO", // -> inline: neut, eos, baso, linf, mono
-  "PLQ",
-  "GLIC","U","CR","Ca","TGO","TGP",
-  "CT","HDL","LDL","VLDL","NHDL","TG",
-  "AcUrico",
-  "Fe","CTLF","SatTransf",
-  "T3","T4L","TSH",
-  "Ferritina","B12","VitD",
+/* ─── ALIASES de exames simples (header do bloco → chave) ────── */
+const ALIASES_BLOCK = {
+  // Hemograma
+  "hemograma": "_HEMOGRAMA",
+  // Glicemia
+  "glicose": "GLIC", "glicemia": "GLIC",
+  "hemoglobina glicada": "HbA1c",
+  // Função renal
+  "ureia": "U", "creatinina": "CR",
+  "calcio ionizado": "CaI",
+  // Eletrólitos
+  "sodio": "Na", "potassio": "K",
+  "magnesio": "Mg", "fosforo": "P",
+  // Básico
+  "calcio": "Ca", "acido urico": "AcUrico",
+  "proteina c reativa": "PCR", "pcr": "PCR",
+  "hemossedimentacao": "VHS", "vhs": "VHS",
+  "albumina": "Alb",
+  "paratormonio": "PTH", "pth": "PTH",
+  "acido folico": "Folato", "folato": "Folato",
+  // Hepático
+  "aspartato amino transferase": "TGO",
+  "aspartato aminotransferase": "TGO",
+  "alanino amino transferase": "TGP",
+  "alanino aminotransferase": "TGP",
+  "fosfatase alcalina": "FAL",
+  "gama gt": "GGT", "gama-gt": "GGT",
+  "amilase": "Amilase", "lipase": "Lipase",
+  // Bilirrubinas — bloco composto
+  "bilirrubinas total e fracoes": "_BILIRRUBINAS",
+  "bilirrubinas total e frações": "_BILIRRUBINAS",
+  // Proteínas — bloco composto
+  "proteinas totais e fracoes": "_PROTEINAS",
+  "proteínas totais e frações": "_PROTEINAS",
+  "eletroforese de proteinas": "_ELETROFORESE",
+  // Lipídios
+  "colesterol total": "CT",
+  "colesterol hdl": "HDL", "hdl colesterol": "HDL",
+  "colesterol ldl": "LDL", "ldl colesterol": "LDL",
+  "colesterol vldl": "VLDL",
+  "colesterol nao hdl": "NHDL",
+  "triglicerides": "TG", "triglicerideos": "TG",
+  // Ferro
+  "ferro": "Fe",
+  "capacidade total de ligacao de ferro": "_FERRO_PANEL",
+  "capacidade total ligacao de ferro": "_FERRO_PANEL",
+  // Coagulograma — blocos compostos
+  "tempo de protrombina": "_TP",
+  "tempo de tromboplastina parcial ativado": "_TTPA",
+  // Tireoide
+  "triiodotironina": "T3", "t3 total": "T3",
+  "tiroxina livre": "T4L", "t4 livre": "T4L",
+  "hormonio tireotrof": "TSH",
+  "anticorpo anti tireoglobulina": "AntiTg",
+  // Vitaminas / minerais
+  "25 oh vitamina d": "VitD", "25-oh vitamina d": "VitD",
+  "vitamina d": "VitD",
+  "vitamina b12": "B12", "cobalamina": "B12",
+  "ferritina": "Ferritina",
+  "cpk": "CPK", "ck": "CPK",
+  // Sorologias qualitativas
+  "hbsag": "_QUAL_HBsAg",
+  "anti hbc anticorpos totais": "_QUAL_AntiHBc",
+  "anti hbc": "_QUAL_AntiHBc",
+  "hcv pesquisa de anticorpos": "_QUAL_HCV",
+  "hcv anticorpos": "_QUAL_HCV",
+  "hiv anticorpos e antigeno p24": "_QUAL_HIV",
+  "hiv": "_QUAL_HIV",
+  "sifilis sorologia": "_QUAL_Sifilis",
+  "sifilis": "_QUAL_Sifilis",
+  "fan crithidia": "_QUAL_FANcrith",
+  "fan hep2": "_QUAL_FANhep2",
+  "anti rnp": "_QUAL_AntiRNP",
+  "anti sm": "_QUAL_AntiSm",
+  "anti ssa-ro": "_QUAL_AntiSSA",
+  "anti ssa ro": "_QUAL_AntiSSA",
+  "anti ssb-la": "_QUAL_AntiSSB",
+  "anti ssb la": "_QUAL_AntiSSB",
+  "anti jo1": "_QUAL_AntiJO1",
+  "anti scl70": "_QUAL_AntiSCL70",
+  "anti scl 70": "_QUAL_AntiSCL70",
+  "imunoglobulina g": "IgG",
+  "imunoglobulina a": "IgA",
+  "imunoglobulina m": "IgM",
+  "imunoglobulina e": "IgE",
+  "fator reumatoide": "FR",
+  // Microbiológicos
+  "cultura aerobia": "_MICRO_CultAerobia",
+  "cultura de fungo": "_MICRO_CultFungo",
+  "cultura de micobacteria": "_MICRO_CultMicob",
+  "pesquisa de baar": "_MICRO_BAAR",
+  "baar": "_MICRO_BAAR",
+  "bacterioscopia": "_MICRO_Bacterio",
+};
+
+/* ─── Aliases internos dos painéis compostos ─────────────────── */
+const ALIASES_PANEL = {
+  // Bilirrubinas
+  "bilirrubina direta": "BilD",
+  "bilirrubinas totais": "BilT",
+  "bilirrubina total": "BilT",
+  "bilirrubina indireta": "BilI",
+  // Proteínas totais
+  "proteinas totais": "ProtT",
+  "albumina": "Alb",
+  "globulinas": "Glob",
+  // Ferro
+  "capacidade total de ligacao de ferro": "CTLF",
+  "capacidade latente": null, // ignorar
+  "indice de saturacao de transferrina": "SatTransf",
+  "saturacao de transferrina": "SatTransf",
+  // TP
+  "tempo de protrombina": "TP_seg",
+  "atividade": "TP_ativ",
+  "rni": "RNI",
+  // TTPA
+  "ttpa": "TTPA_seg",
+  "razao": "TTPA_razao",
+};
+
+/* ─── Rótulos curtos para sorologias qualitativas ─────────────── */
+const QUAL_LABELS = {
+  "_QUAL_HBsAg":    "HBsAg",
+  "_QUAL_AntiHBc":  "AntiHBc",
+  "_QUAL_HCV":      "HCV",
+  "_QUAL_HIV":      "HIV",
+  "_QUAL_Sifilis":  "Sífilis",
+  "_QUAL_FANcrith": "FANcrith",
+  "_QUAL_FANhep2":  "FANhep2",
+  "_QUAL_AntiRNP":  "Anti-RNP",
+  "_QUAL_AntiSm":   "Anti-SM",
+  "_QUAL_AntiSSA":  "Anti-SSA",
+  "_QUAL_AntiSSB":  "Anti-SSB",
+  "_QUAL_AntiJO1":  "Anti-JO1",
+  "_QUAL_AntiSCL70":"Anti-SCL70",
+};
+
+/* ─── Rótulos curtos para microbiológicos ────────────────────── */
+const MICRO_LABELS = {
+  "_MICRO_CultAerobia": "CultAerobia",
+  "_MICRO_CultFungo":   "CultFungo",
+  "_MICRO_CultMicob":   "CultMicob",
+  "_MICRO_BAAR":        "BAAR",
+  "_MICRO_Bacterio":    "Bacterio",
+};
+
+/* ─── Normalização qualitativa de resultado ──────────────────── */
+const QUAL_MAP = [
+  [/n[ãa]o\s*reagente/i,       "NR"],
+  [/negati/i,                   "NEG"],
+  [/positiv/i,                  "POS"],
+  [/n[ãa]o\s*houve\s+crescimento/i, "NEG"],
+  [/inconclusiv/i,              "INCONCL"],
+  [/reagente/i,                 "R"],
 ];
-const LEUCO_SUBS = ["neut","eos","baso","linf","mono"];
+
+function normalizeQual(str) {
+  for (const [re, label] of QUAL_MAP) {
+    if (re.test(str)) return label;
+  }
+  return str.trim().slice(0, 20);
+}
+
+/* ─── Ordem fixa de saída v2 ─────────────────────────────────── */
+const OUTPUT_ORDER = [
+  // Hemograma
+  "Hb","Ht","VCM","HCM","CHCM","RDW",
+  "LEUCO",   // inline: neut, eos, baso, linf, mono
+  "PLQ",
+  // Glicemia
+  "GLIC","HbA1c",
+  // Função renal + eletrólitos
+  "U","CR","Na","K","Ca","CaI","Mg","P",
+  // Hepático
+  "TGO","TGP","FAL","GGT",
+  "BilT","BilD","BilI",
+  "Amilase","Lipase",
+  // Proteínas
+  "Alb","ProtT","Glob",
+  // Coagulograma
+  "TP",    // composto: seg + RNI
+  "TTPA",  // composto: seg + razão
+  // Lipídios
+  "CT","HDL","LDL","VLDL","NHDL","TG",
+  // Outros básicos
+  "AcUrico","PCR","VHS","FR",
+  // Ferro e reservas
+  "Fe","CTLF","SatTransf",
+  // Tireoide
+  "T3","T4L","TSH","PTH","AntiTg",
+  // Vitaminas e reservas
+  "Ferritina","Folato","B12","VitD",
+  // Outros
+  "CPK","IgG","IgA","IgM","IgE",
+  // Sorologias qualitativas (ordem fixa)
+  "_QUAL_HBsAg","_QUAL_AntiHBc","_QUAL_HCV","_QUAL_HIV","_QUAL_Sifilis",
+  "_QUAL_FANcrith","_QUAL_FANhep2",
+  "_QUAL_AntiRNP","_QUAL_AntiSm","_QUAL_AntiSSA","_QUAL_AntiSSB",
+  "_QUAL_AntiJO1","_QUAL_AntiSCL70",
+  // Microbiológicos (ordem de aparição, tratados separadamente)
+];
+
+const LEUCO_SUBS   = ["neut","eos","baso","linf","mono"];
 const LEUCO_LABELS = { neut:"neut.", eos:"eos.", baso:"baso", linf:"linf.", mono:"mono" };
 
-/* ─── Texto de exemplo (formato real IAMSPE) ──────────────────── */
-const EXEMPLO = `HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Diretor Técnico: Dra. Patricia Mantovani - CRF-SP: 20292
-Nº CEVS: 355030890-861-014006-1-4 CRF-SP:61205
-Av. Ibirapuera 981 - Indianópolis - 04029-000 - São Paulo - SP
-Emissão: 17/03/2025-14:24
-Pedido: 250061912
-Prontuário: 1593518 Paciente: CARLOS ALBERTO CORREA SILVA
-Data Nasc.: 06/06/1962 Sexo:M Idade: 62a 9m 11d Data Solicitação: 26/02/2025 - 07:13
-Solicitante: Dr.(a): LUIZ GUSTAVO MENDEZ GONZALEZ DE OLIVEIRA - CRM N°: 100079
-Setor solicitante: REDE CREDENCIADA - CONSULTAS MEDICAS
-Responsável: MARISA TAMIKO OGURA - CRF: 16933
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-HEMOGRAMA,SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 10:51
-ERITROGRAMA
-Resultados Valores de referência Metodologia
-Eritrócitos 5,21 milhões/mm³ 4,40 a 5,70 milhões/mm³ Automatizada
-Hemoglobina 16,1 g/dL 13,0 a 18,0 g/dL morfológico quando aplicável
-Hematócrito 49,3 % 40,0 a 52,0 %
-VCM 94,6 fL 80,0 a 100,0 fL
-HCM 30,9 pg 27,0 a 32,0 pg
-CHCM 32,7 g/dL 32,0 a 37,0 g/dL
-RDW-CV 14,9 % 9,5 a 14,8 %
-LEUCOGRAMA
-Resultados Valores de referência Metodologia
-LEUCÓCITOS 6,06 mil/mm³ 4,00 a 11,00 mil/mm³ Automatizada
-Neutrófilos 63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³
-Eosinófilos 2,50 % 0,15 mil/mm³ 0,05 a 0,50 mil/mm³
-Basófilos 0,40 % 0,02 mil/mm³ 0,00 a 0,10 mil/mm³
-Linfócitos 24,30 % 1,47 mil/mm³ 0,90 a 2,90 mil/mm³
-Monócitos 9,00 % 0,55 mil/mm³ 0,30 a 0,90 mil/mm³
-PLAQUETAS Valores de referência Metodologia
-Resultados: 213 mil/mm³ 150 a 400 mil/mm³ Automatizada
-MARISA TAMIKO OGURA
-CRF 16933
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: VITOR HUGO CARVALHO DA SILVA - CRF: 77862
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-ÁCIDO ÚRICO, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em:26/02/2025 12:29
-Resultado Valores de referência Método
-7,1 mg/dL 3,5 a 7,2 mg/dL Enzimático colorimétrico
-Resultados anteriores:
-VITOR HUGO CARVALHO DA SILVA
-CRF 77862
-COLESTEROL TOTAL, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
-Resultado Valores de referência Método
- 162 mg/dL Desejável: < 190 mg/dL Enzimático colorimétrico
-Resultados anteriores:
-VITOR HUGO CARVALHO DA SILVA
-CRF 77862
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: ERIK ROGERIO FANTINATI - CRF: 16999
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-COLESTEROL HDL, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-54 mg/dL Desejável: > 40 mg/dL Enzimático colorimétrico
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-COLESTEROL LDL, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-92 mg/dL Calculado - Fórmula de Martin
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-COLESTEROL VLDL, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-16 mg/dL Calculado - Fórmula de Martin
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-COLESTEROL NÃO HDL, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-108 mg/dL Calculado
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-TRIGLICÉRIDES, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-71 mg/dL Desejável: < 150 mg/dL Enzimático
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: VITOR HUGO CARVALHO DA SILVA - CRF: 77862
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-GLICOSE, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
-Resultado Valores de referência Método
-73 mg/dL 75 a 99 mg/dL Enzimático
-Resultados anteriores:
-86 (19/04/2018)
-VITOR HUGO CARVALHO DA SILVA
-CRF 77862
-URÉIA, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
-Resultado Valores de referência Método
-28 mg/dL 17 a 43 mg/dL Enzimático
-Resultados anteriores:
-35 (19/04/2018)
-VITOR HUGO CARVALHO DA SILVA
-CRF 77862
-CREATININA, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:43
-Resultado Valores de referência Método
-1,44 mg/dL 0,80 a 1,40 mg/dL Colorimétrico
-Resultados anteriores:
-VITOR HUGO CARVALHO DA SILVA
-CRF 77862
-TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)
-Resultado Valores de referência* Método
-TFGE para etnia negra: 60 mL/min/1,73m2 >90 mL/min/1,73m2 Fórmula CKD-EPI
-TGFE para outras etnias: 52 mL/min/1,73m2
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: ERIK ROGERIO FANTINATI - CRF: 16999
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-ASPARTATO AMINO TRANSFERASE (TGO), SANGUE
-Coletado em:26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-18 U/L 13 a 39 U/L Enzimático
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-ALANINO AMINO TRANSFERASE (TGP), SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 13:02
-Resultado Valores de referência Método
-13 U/L 0 a 50 U/L Enzimático
-Resultados anteriores:
-ERIK ROGERIO FANTINATI
-CRF 16999
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: VITOR HUGO CARVALHO DA SILVA - CRF: 77862
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-FERRO, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 12:29
-Resultado Valores de referência Método
-155 µg/dL 70 a 180 µg/dL Colorimétrico
-Resultados anteriores:
-VITOR HUGO CARVALHO DA SILVA
-CRF 77862
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: ELIZA YOKO YOSHIDA - CRF: 6286
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-TIROXINA LIVRE (T4L), SANGUE
-Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 12:25
-Resultado Valores de referência Método
-0,77 ng/dl 0,61 a 1,12 ng/dl Quimioluminescência
-Resultados anteriores:
-ELIZA YOKO YOSHIDA
-CRF 6286
-HORMÔNIO TIREOTRÓFICO (TSH), SANGUE
-Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 12:25
-Resultado Valores de referência Método
- 1,22 µUI/ml 0,34 a 5,33 µUI/ml Quimioluminescência
-Resultados anteriores:
-ELIZA YOKO YOSHIDA
-CRF 6286
-FERRITINA, SANGUE
-Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 12:25
-Resultado Valores de referência Método
-20,0 ng/ml Homens: 23,9 a 336,2 ng/ml Quimioluminescência
-Resultados anteriores:
-ELIZA YOKO YOSHIDA
-CRF 6286
-VITAMINA B12, SANGUE
-Coletado em: 26/02/2025 07:40 Liberado em: 26/02/2025 10:52
-Resultado Valores de referência Método
-396 pg/ml 180 a 914 pg/ml Quimioluminescência
-Resultados anteriores:
-ELIZA YOKO YOSHIDA
-CRF 6286
-HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Responsável: MARIZA DONISETI DE OLIVEIRA - CRF: 19036
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-25 OH VITAMINA D, SANGUE
-Coletado em: 26/02/2025 07:39 Liberado em: 26/02/2025 11:05
-Resultado Valores de referência Método
-61,7 ng/mL < 10,0 ng/mL Deficiência CMIA
-Resultados anteriores:
-45,3 (19/04/2018)
-MARIZA DONISETI DE OLIVEIRA
-CRF 19036
-___________________________________________________________________________________________________________________`;
-
 /* ══════════════════════════════════════════════════════════════
-   PARSER — calibrado para o formato real dos laudos do IAMSPE
+   UTILIDADES
 ══════════════════════════════════════════════════════════════ */
 
-/**
- * ETAPA 0 — Remove o cabeçalho institucional repetido.
- * O cabeçalho aparece antes de cada exame e contém linhas
- * como "HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL", endereço,
- * pedido, prontuário, solicitante, disclaimer, CRF, nome do responsável.
- * Estratégia: remover essas linhas antes de segmentar blocos.
- */
-function removeInstitutionalNoise(text) {
-  const noisePatterns = [
-    /^HOSPITAL DO SERVIDOR.*/i,
-    /^SERVIÇO DE LABORATÓRIO.*/i,
-    /^Diretor Técnico:.*/i,
-    /^Nº CEVS:.*/i,
-    /^Av\..*/i,
-    /^Emissão:.*/i,
-    /^Pedido:.*/i,
-    /^Prontuário:.*/i,
-    /^Data Nasc\..*/i,
-    /^Solicitante:.*/i,
-    /^Setor solicitante:.*/i,
-    /^Responsável:.*/i,
-    /^Os resultados dos exames.*/i,
-    /^A interpretação correta.*/i,
-    /^análise conjunta.*/i,
-    /^e deve ser feita.*/i,
-    /^_{5,}/,                          // linhas de sublinhado ___
-    /^-{5,}/,                          // linhas de traço ---
-    /^CRF\s*[-:]?\s*\d+$/i,           // "CRF 39952" solto
-    /^CRM\s*[-:]?\s*\d+$/i,
-  ];
+function nk(str) {
+  return str.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ").trim();
+}
 
-  // Também remove linhas que são apenas nome do responsável (NOME SOBRENOME em caps)
-  // seguido de linha "CRF XXXXX" — detecta o par
-  const lines = text.split("\n");
-  const cleaned = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i].trim();
-    // Par: linha toda em maiúsculas (nome) + próxima é "CRF \d+"
-    if (
-      i + 1 < lines.length &&
-      /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s]+$/.test(line) &&
-      line.length > 5 &&
-      /^CRF\s+\d+/i.test(lines[i + 1].trim())
-    ) {
-      i += 2; // pula nome + CRF
-      continue;
-    }
-    const isNoise = noisePatterns.some(p => p.test(line));
-    if (!isNoise) cleaned.push(lines[i]);
-    i++;
+function resolveBlockAlias(rawHeader) {
+  // Para headers com múltiplas vírgulas como "HCV, PESQUISA DE ANTICORPOS, SANGUE"
+  // precisamos reconstruir o nome completo excluindo o material final
+  const MATERIAIS = /^(sangue|soro|urina|plasma|lcr|escarro|fezes|swab|liquor|liquido|medula|lavado|aspirado|tecido|cateter)/i;
+  const parts = rawHeader.split(",").map(p => p.trim());
+  // Encontrar onde começa o material biológico (da direita para esquerda)
+  let materialIdx = parts.length;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (MATERIAIS.test(parts[i])) materialIdx = i;
+    else break;
   }
-  return cleaned.join("\n");
-}
-
-/** ETAPA 1 — Sanitização básica */
-function sanitizeRawText(raw) {
-  let t = raw;
-  t = t.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  t = t.split("\n").map(l => l.replace(/[ \t]+/g, " ")).join("\n");
-  t = t.replace(/\n{3,}/g, "\n\n");
-  return t;
-}
-
-/** ETAPA 2 — Segmentação em blocos de exame.
- *
- *  Um bloco começa quando encontramos uma linha que é cabeçalho de exame:
- *  - Em CAIXA ALTA (≥70% das letras)
- *  - Contém vírgula separando nome do material
- *  - Exemplos: "HEMOGRAMA,SANGUE", "ÁCIDO ÚRICO, SANGUE",
- *              "ASPARTATO AMINO TRANSFERASE (TGO), SANGUE"
- *              "25 OH VITAMINA D, SANGUE"
- *
- *  Exceção: "TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)" não tem
- *  "Coletado em" → será descartado no parser (sem data).
- */
-function splitIntoExamBlocks(cleanText) {
-  const lines = cleanText.split("\n");
-  const blocks = [];
-  let current = [];
-
-  const isExamHeader = (line) => {
-    const s = line.trim();
-    if (!s.includes(",")) return false;
-
-    // A parte antes da primeira vírgula deve ser o nome do exame (sem números)
-    const beforeComma = s.split(",")[0].trim();
-    if (beforeComma.length < 3) return false;
-
-    // Rejeitar imediatamente se começa com número (ex: "94,6 fL..." — vírgula decimal)
-    // Exceção: nomes que começam com dígito de nomenclatura (ex: "25 OH VITAMINA D")
-    if (/^\d/.test(beforeComma) && !/^\d+\s+[A-Za-z]/.test(beforeComma)) return false;
-
-    // Rejeitar se o nome contém vírgula decimal — indica valor numérico, não nome de exame
-    // ex: "94,6 fL" → vírgula entre dígitos → não é nome de exame
-    // Remove parênteses antes de checar (ex: "(T4L)", "(TGO)" são parte do nome)
-    const bcNoParen = beforeComma.replace(/\(.*?\)/g, "").trim();
-    if (/\d[,.]\d/.test(bcNoParen)) return false;
-
-    // A parte após a primeira vírgula DEVE ser material biológico reconhecível
-    // Isso é a distinção mais confiável: "GLICOSE, SANGUE" → após vírgula = "SANGUE"
-    const afterComma = s.split(",").slice(1).join(",").trim();
-    if (!/^(sangue|soro|urina|plasma|lcr|escarro|fezes|swab|liquor|liquido|medula)/i.test(afterComma)) return false;
-
-    // Maiúsculas: ≥65% das letras do nome devem ser maiúsculas
-    const letters = beforeComma.replace(/[^a-zA-ZÀ-ÿ]/g, "");
-    if (letters.length < 2) return false;
-    const upper = letters.replace(/[^A-ZÀÁÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/g, "").length;
-    return (upper / letters.length) >= 0.65;
-  };
-
-  for (const line of lines) {
-    if (isExamHeader(line)) {
-      if (current.length > 0) blocks.push(current.join("\n"));
-      current = [line];
-    } else {
-      current.push(line);
-    }
+  const namePart = parts.slice(0, materialIdx).join(" ");
+  const k = nk(namePart.replace(/\s*\(.*?\)\s*/g," ").trim());
+  if (ALIASES_BLOCK[k]) return ALIASES_BLOCK[k];
+  // prefixo mais longo
+  let best = null, bestLen = 0;
+  for (const [key, val] of Object.entries(ALIASES_BLOCK)) {
+    if (k.startsWith(key) && key.length > bestLen) { best = val; bestLen = key.length; }
   }
-  if (current.length > 0) blocks.push(current.join("\n"));
-  return blocks.filter(b => b.trim().length > 5);
+  return best;
 }
 
-/** ETAPA 3 — Extrai data de coleta */
-function extractCollectionDate(block) {
-  const m = block.match(/coletado\s+em\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+function resolvePanelAlias(name) {
+  const k = nk(name);
+  if (ALIASES_PANEL[k] !== undefined) return ALIASES_PANEL[k];
+  let best = undefined, bestLen = 0;
+  for (const [key, val] of Object.entries(ALIASES_PANEL)) {
+    if (k.startsWith(key) && key.length > bestLen) { best = val; bestLen = key.length; }
+  }
+  return best;
+}
+
+function resolveHemoAlias(name) {
+  const k = nk(name);
+  if (ALIASES_HEMO[k]) return ALIASES_HEMO[k];
+  let best = null, bestLen = 0;
+  for (const [key, val] of Object.entries(ALIASES_HEMO)) {
+    if (k.startsWith(key) && key.length > bestLen) { best = val; bestLen = key.length; }
+  }
+  return best;
+}
+
+function extractFirstNumber(str) {
+  for (const tok of str.trim().split(/\s+/)) {
+    if (/^\d+([,.]\d+)?$/.test(tok)) return tok.replace(".",",");
+  }
+  const m = str.match(/(?<![,\d\-])(\d+(?:,\d+)?)(?![,\d\-])/);
   return m ? m[1] : null;
 }
 
-/** Converte dd/mm/aaaa → aaaa-mm-dd para ordenação */
 function dateToSortKey(dmy) {
   if (!dmy) return "";
-  const [d, m, a] = dmy.split("/");
+  const [d,m,a] = dmy.split("/");
   return `${a}-${m}-${d}`;
 }
 
-/** Normaliza string para busca de alias (sem acento, minúsculo, espaço simples) */
-function normalizeKey(str) {
-  return str
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+/* ──────────────────────────────────────────────────────────────
+   ETAPA 0 — Remoção de ruído institucional
+   Lida com variantes:
+   - Linha única: "HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO"
+   - Linha quebrada: "HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL -\nFMO"
+   - Conselhos: CRF, CRM, CRBIO, CRA (linha solta após nome)
+────────────────────────────────────────────────────────────── */
+const NOISE_PATTERNS = [
+  /^HOSPITAL DO SERVIDOR/i,
+  /^FMO\s*$/i,
+  /^SERVIÇO DE LABORATÓRIO/i,
+  /^CLÍNICAS\s*$/i,
+  /^Diretor Técnico:/i,
+  /^Nº CEVS:/i,
+  /^Av\.\s/i,
+  /^Emissão:/i,
+  /^Pedido:\s*$/i,       // "Pedido:" sozinho na linha
+  /^Pedido:\s*\d/i,      // "Pedido: 250061912"
+  /^Prontuário:/i,
+  /^Data Nasc\./i,
+  /^Solicitante:/i,
+  /^Setor solicitante:/i,
+  /^Responsável:/i,
+  /^Os resultados dos exames/i,
+  /^A interpretação correta/i,
+  /^análise conjunta/i,
+  /^e deve ser feita/i,
+  /^_{5,}/,
+  /^-{5,}/,
+  // Conselhos soltos
+  /^CRF\s*[-:]?\s*[\d\/]/i,
+  /^CRM\s*[-:]?\s*[\d\/]/i,
+  /^CRBIO\s*[-:]?\s*[\d\/]/i,
+  /^CRA\s*[-:]?\s*/i,
+  // Notas institucionais comuns
+  /^NOVOS VALORES DE REFERÊNCIA/i,
+  /^PARA LAUDOS/i,
+  /^EXAMES REALIZADOS EM CONFORMIDADE/i,
+];
+
+const COUNCIL_PATTERN = /^(CRF|CRM|CRBIO|CRA)\s*[-:]?\s*[\d\/]/i;
+
+function removeInstitutionalNoise(text) {
+  const lines = text.split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    // Par: nome em caps + conselho na próxima linha
+    if (
+      i + 1 < lines.length &&
+      /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\.]+$/.test(line) &&
+      line.length > 4 && line.length < 60 &&
+      COUNCIL_PATTERN.test(lines[i+1].trim())
+    ) {
+      i += 2; continue;
+    }
+    if (!NOISE_PATTERNS.some(p => p.test(line))) {
+      out.push(lines[i]);
+    }
+    i++;
+  }
+  return out.join("\n");
 }
 
-/** Resolve alias pelo dicionário */
-function resolveAlias(raw) {
-  const nk = normalizeKey(raw);
-  if (ALIASES[nk]) return ALIASES[nk];
-  // Match de prefixo longo (para nomes compostos)
-  let bestMatch = null;
-  let bestLen = 0;
-  for (const [key, val] of Object.entries(ALIASES)) {
-    if (nk.startsWith(key) && key.length > bestLen) {
-      bestMatch = val;
-      bestLen = key.length;
+/* ──────────────────────────────────────────────────────────────
+   ETAPA 1 — Sanitização
+────────────────────────────────────────────────────────────── */
+function sanitizeRawText(raw) {
+  let t = raw.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  t = t.split("\n").map(l => l.replace(/[ \t]+/g," ")).join("\n");
+  t = t.replace(/\n{3,}/g,"\n\n");
+  return t;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ETAPA 2 — Segmentação em blocos de exame
+   
+   Detecta headers do tipo "NOME DO EXAME, MATERIAL"
+   com tratamento especial para:
+   - Nomes multilinhas (culturas): junta linhas seguidas antes da vírgula
+   - "Coletado:" sem "em" (microbiológicos)
+────────────────────────────────────────────────────────────── */
+function isExamHeader(line) {
+  const s = line.trim();
+  if (!s.includes(",")) return false;
+  const bc = s.split(",")[0].trim();
+  if (bc.length < 3) return false;
+  // Rejeitar se começa com número (exceto nomenclatura química: "25 OH")
+  if (/^\d/.test(bc) && !/^\d+\s+[A-Za-z]/.test(bc)) return false;
+  // Rejeitar vírgula decimal no nome (fora de parênteses)
+  const bcNP = bc.replace(/\(.*?\)/g,"").trim();
+  if (/\d[,.]\d/.test(bcNP)) return false;
+  // O ÚLTIMO segmento após vírgulas deve ser material biológico
+  // (suporta múltiplas vírgulas: "HCV, PESQUISA DE ANTICORPOS, SANGUE")
+  const allParts = s.split(",").map(p => p.trim());
+  const lastPart = allParts[allParts.length - 1];
+  if (!/^(sangue|soro|urina|plasma|lcr|escarro|fezes|swab|liquor|liquido|medula|lavado|aspirado|tecido|cateter)/i.test(lastPart)) return false;
+  // ≥65% das letras do nome em maiúsculas
+  const letters = bc.replace(/[^a-zA-ZÀ-ÿ]/g,"");
+  if (letters.length < 2) return false;
+  const upper = letters.replace(/[^A-ZÀÁÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/g,"").length;
+  return (upper / letters.length) >= 0.65;
+}
+
+function splitIntoExamBlocks(cleanText) {
+  // Primeiro: juntar linhas de nomes quebrados de culturas
+  // ex: "CULTURA DE MICOBACTERIA\nRESPIRATORIO INFERIOR, LAVADO\nBRONCOALVEOLAR"
+  // Estratégia: se linha em caps não tem vírgula mas a próxima tem → juntar
+  const rawLines = cleanText.split("\n");
+  const joinedLines = [];
+  let i = 0;
+  while (i < rawLines.length) {
+    const cur = rawLines[i];
+    const curT = cur.trim();
+    // Detectar linha em caps sem vírgula seguida de continuação
+    const isCapsNoComma = curT.length > 3 &&
+      !curT.includes(",") &&
+      /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\)]+$/.test(curT);
+    const nextHasComma = i + 1 < rawLines.length &&
+      rawLines[i+1].trim().includes(",");
+    const nextIsContinuation = i + 1 < rawLines.length &&
+      /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\)]+$/.test(rawLines[i+1].trim());
+    if (isCapsNoComma && (nextHasComma || nextIsContinuation) && i + 1 < rawLines.length) {
+      // Tenta juntar até encontrar vírgula
+      let joined = curT;
+      let j = i + 1;
+      while (j < rawLines.length && !rawLines[j].trim().includes(",") &&
+             /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\)]+$/.test(rawLines[j].trim())) {
+        joined += " " + rawLines[j].trim();
+        j++;
+      }
+      if (j < rawLines.length && rawLines[j].trim().includes(",") &&
+          /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\),]+$/.test(rawLines[j].trim())) {
+        joined += " " + rawLines[j].trim();
+        j++;
+      }
+      joinedLines.push(joined);
+      i = j;
+    } else {
+      joinedLines.push(cur);
+      i++;
     }
   }
-  return bestMatch;
+
+  const lines = joinedLines;
+  const blocks = [];
+  let cur = [];
+  for (const line of lines) {
+    if (isExamHeader(line)) {
+      if (cur.length) blocks.push(cur.join("\n"));
+      cur = [line];
+    } else {
+      cur.push(line);
+    }
+  }
+  if (cur.length) blocks.push(cur.join("\n"));
+  return blocks.filter(b => b.trim().length > 5);
 }
 
-/** Extrai o primeiro número válido de uma string (formato BR: vírgula decimal) */
-function extractFirstNumber(str) {
-  // Ignora ranges como "4,00-11,00" ou "13,0-17,5"
-  // Pega o primeiro token numérico isolado
-  const tokens = str.trim().split(/\s+/);
-  for (const tok of tokens) {
-    // Número simples: dígitos com vírgula ou ponto decimal, sem traço no meio
-    if (/^\d+([,\.]\d+)?$/.test(tok)) return tok.replace(".", ",");
-    // Número com espaço líder já tratado pelo trim
-  }
-  // Fallback: regex mais ampla
-  const m = str.match(/(?<![,\d-])(\d+(?:,\d+)?)(?![,\d-])/);
+/* ──────────────────────────────────────────────────────────────
+   ETAPA 3 — Extração de data de coleta
+   Suporta "Coletado em:" e "Coletado:" (microbiológicos)
+────────────────────────────────────────────────────────────── */
+function extractCollectionDate(block) {
+  const m = block.match(/coletad[oa]\s*(?:em\s*)?:\s*(\d{2}\/\d{2}\/\d{4})/i);
   return m ? m[1] : null;
 }
 
-/* ─── Parser do HEMOGRAMA ─────────────────────────────────────── */
-/*
- * Formato real observado:
- *   ERITROGRAMA
- *   Hemoglobina 16,1 g/dL 13,0 a 18,0 g/dL morfológico...
- *   LEUCOGRAMA
- *   LEUCÓCITOS 6,06 mil/mm³ 4,00 a 11,00 mil/mm³ Automatizada...
- *   Neutrófilos 63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³
- *   PLAQUETAS Valores de referência Metodologia
- *   Resultados: 213 mil/mm³ 150 a 400 mil/mm³ Automatizada
- */
+/* ──────────────────────────────────────────────────────────────
+   ETAPA 4 — Extração do material de coleta
+   Para uso nos microbiológicos: "(LBA)", "(escarro)", etc.
+────────────────────────────────────────────────────────────── */
+function extractMaterial(blockHeader) {
+  // "CULTURA AEROBIA RESPIRATORIO INFERIOR, LAVADO BRONCOALVEOLAR"
+  // → pega o que vem depois da vírgula
+  const afterComma = blockHeader.split(",").slice(1).join(",").trim();
+  if (!afterComma) return "";
+  // Abreviações conhecidas
+  const matMap = [
+    [/lavado\s+broncoalveolar/i, "LBA"],
+    [/lavado/i, "Lavado"],
+    [/escarro/i, "Escarro"],
+    [/sangue/i, ""],       // sangue é implícito, não mostrar
+    [/urina/i, "Urina"],
+    [/swab/i, "Swab"],
+    [/aspirado/i, "Aspirado"],
+    [/lcr|liquor/i, "LCR"],
+  ];
+  for (const [re, label] of matMap) {
+    if (re.test(afterComma)) return label;
+  }
+  // Fallback: primeiras 12 chars
+  return afterComma.slice(0,12).trim();
+}
+
+/* ──────────────────────────────────────────────────────────────
+   PARSERS ESPECÍFICOS
+────────────────────────────────────────────────────────────── */
+
+/* ── Hemograma ───────────────────────────────────────────────── */
 function parseHemogramaBlock(block) {
   const result = {};
   const lines = block.split("\n");
   let inResultados = false;
-
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (!line) continue;
-
-    // Parar em "Resultados anteriores"
     if (/resultados\s+anteriores/i.test(line)) { inResultados = true; }
     if (inResultados) continue;
-
-    // Skip linhas de seção interna ou cabeçalhos de tabela
     if (/^(eritrograma|leucograma|plaquetas\s+valores|plaquetas\s*$|resultados?\s+valores|metodologia|automatizada|hemograma|coletado|liberado)/i.test(line)) continue;
-
-    // ── Caso especial: plaquetas com "Resultados: 213 mil/mm³"
+    // Plaquetas: "Resultados: 213 mil/mm³"
     if (/^resultados?\s*:/i.test(line)) {
-      const num = extractFirstNumber(line.replace(/^resultados?\s*:/i, "").trim());
+      const num = extractFirstNumber(line.replace(/^resultados?\s*:/i,"").trim());
       if (num && !result["PLQ"]) result["PLQ"] = num;
       continue;
     }
-
-    // ── Tokenizar a linha
     const tokens = line.split(/\s+/);
-    if (tokens.length < 2) continue;
-
-    // Encontrar onde termina o nome (primeiro token numérico)
-    let nameEnd = tokens.length;
+    let ne = tokens.length;
     for (let i = 0; i < tokens.length; i++) {
-      if (/^\d+([,\.]\d+)?$/.test(tokens[i])) { nameEnd = i; break; }
+      if (/^\d+([,.]\d+)?$/.test(tokens[i])) { ne = i; break; }
     }
-    if (nameEnd === 0 || nameEnd >= tokens.length) continue;
-
-    const namePart = tokens.slice(0, nameEnd).join(" ");
-    const key = resolveAlias(namePart);
+    if (ne === 0 || ne >= tokens.length) continue;
+    const key = resolveHemoAlias(tokens.slice(0, ne).join(" "));
     if (!key) continue;
-
-    // Coletar todos os números isolados da parte de valor
-    const valuePart = tokens.slice(nameEnd);
-    const nums = [];
-    for (const tok of valuePart) {
-      if (/^\d+([,\.]\d+)?$/.test(tok)) {
-        nums.push(tok.replace(".", ","));
-      }
-    }
-    if (nums.length === 0) continue;
-
-    if (key === "PLQ") {
-      if (!result["PLQ"]) result["PLQ"] = nums[0];
-      continue;
-    }
-
-    if (key === "LEUCO") {
-      if (!result["LEUCO"]) result["LEUCO"] = nums[0];
-      continue;
-    }
-
-    // Diferenciais: formato "63,80 % 3,87 mil/mm³ 1,7 a 8 mil/mm³"
-    // nums[0] = percentual, nums[1] = absoluto (se existir)
+    const nums = tokens.slice(ne).filter(t => /^\d+([,.]\d+)?$/.test(t)).map(t => t.replace(".",","));
+    if (!nums.length) continue;
+    if (key === "PLQ") { if (!result["PLQ"]) result["PLQ"] = nums[0]; continue; }
+    if (key === "LEUCO") { if (!result["LEUCO"]) result["LEUCO"] = nums[0]; continue; }
     if (LEUCO_SUBS.includes(key)) {
-      if (nums.length >= 2) {
-        // Preferir absoluto
-        result[key] = nums[1];
-      } else {
-        // Só percentual → guardar para calcular depois
-        if (!result[`${key}_pct`]) result[`${key}_pct`] = nums[0];
-      }
+      if (nums.length >= 2) result[key] = nums[1];
+      else if (!result[key+"_pct"]) result[key+"_pct"] = nums[0];
       continue;
     }
-
-    // Demais (Hb, Ht, VCM, HCM, CHCM, RDW)
     if (!result[key]) result[key] = nums[0];
   }
-
-  // Fallback: calcular absolutos a partir de percentuais
+  // Fallback percentual → absoluto
   if (result["LEUCO"]) {
-    const leucoFloat = parseFloat(result["LEUCO"].replace(",", "."));
-    for (const sub of LEUCO_SUBS) {
-      if (!result[sub] && result[`${sub}_pct`]) {
-        const pct = parseFloat(result[`${sub}_pct`].replace(",", "."));
-        const abs = (leucoFloat * pct / 100).toFixed(2).replace(".", ",");
-        result[sub] = abs;
+    const lf = parseFloat(result["LEUCO"].replace(",","."));
+    for (const s of LEUCO_SUBS) {
+      if (!result[s] && result[s+"_pct"]) {
+        result[s] = (lf * parseFloat(result[s+"_pct"].replace(",",".")) / 100).toFixed(2).replace(".",",");
       }
     }
   }
-  for (const sub of LEUCO_SUBS) delete result[`${sub}_pct`];
-
+  for (const s of LEUCO_SUBS) delete result[s+"_pct"];
   return result;
 }
 
-/* ─── Parser do painel de Ligação de Ferro ───────────────────── */
-function parseIronBindingBlock(block) {
+/* ── Bilirrubinas ────────────────────────────────────────────── */
+function parseBilirrubinaBlock(block) {
   const result = {};
   const lines = block.split("\n");
   let inResultados = false;
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    if (/resultados\s+anteriores/i.test(line)) { inResultados = true; }
+  for (const line of lines) {
+    const l = line.trim();
+    if (!l) continue;
+    if (/resultados\s+anteriores/i.test(l)) { inResultados = true; }
     if (inResultados) continue;
-    if (/capacidade\s+latente/i.test(line)) continue;
-
-    const tokens = line.split(/\s+/);
-    let nameEnd = tokens.length;
+    if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l)) continue;
+    const tokens = l.split(/\s+/);
+    let ne = tokens.length;
     for (let i = 0; i < tokens.length; i++) {
-      if (/^\d+([,\.]\d+)?$/.test(tokens[i])) { nameEnd = i; break; }
+      if (/^\d+([,.]\d+)?$/.test(tokens[i])) { ne = i; break; }
     }
-    if (nameEnd === 0 || nameEnd >= tokens.length) continue;
-
-    const namePart = tokens.slice(0, nameEnd).join(" ");
-    const key = resolveAlias(namePart);
+    if (ne === 0 || ne >= tokens.length) continue;
+    const key = resolvePanelAlias(tokens.slice(0, ne).join(" "));
     if (!key) continue;
-
-    const num = extractFirstNumber(tokens.slice(nameEnd).join(" "));
+    const num = extractFirstNumber(tokens.slice(ne).join(" "));
     if (num && !result[key]) result[key] = num;
   }
   return result;
 }
 
-/* ─── Parser genérico para exames simples ─────────────────────── */
-/*
- * Formato real:
- *   COLESTEROL TOTAL, SANGUE        ← header (já extraído como blockKey)
- *   Coletado em: ... Liberado em: ...
- *   Resultado Valores de referência Método
- *    162 mg/dL Desejável: < 190 ...   ← linha do resultado (pode ter espaço líder)
- *   Resultados anteriores:            ← parar aqui
- */
-function parseSimpleExamBlock(block) {
+/* ── Proteínas totais e frações ──────────────────────────────── */
+function parseProteinasBlock(block) {
   const result = {};
   const lines = block.split("\n");
-
-  // Nome do exame = antes da primeira vírgula da primeira linha
-  const headerRaw = lines[0].trim().split(",")[0].trim();
-  // Remove parênteses e conteúdo: "ASPARTATO AMINO TRANSFERASE (TGO)" → "ASPARTATO AMINO TRANSFERASE"
-  const headerClean = headerRaw.replace(/\s*\(.*?\)\s*/g, " ").trim();
-  const blockKey = resolveAlias(headerClean);
-
   let inResultados = false;
-  let gotValue = false;
-
-  for (let i = 1; i < lines.length; i++) {
-    const raw = lines[i];
-    const line = raw.trim();
-    if (!line) continue;
-
-    if (/resultados\s+anteriores/i.test(line)) { inResultados = true; }
+  for (const line of lines) {
+    const l = line.trim();
+    if (!l) continue;
+    if (/resultados\s+anteriores/i.test(l)) { inResultados = true; }
     if (inResultados) continue;
-
-    // Ignorar linhas de metadados e cabeçalhos de tabela
-    if (/^(coletado|liberado|resultado\s+valores|resultado\s*$|valores\s+de\s+refer|método|metodologia)/i.test(line)) continue;
-    // Ignorar linhas só de texto longo (valores de referência narrativos)
-    // Se a linha não começa com número nem com nome de sub-exame conhecido → provável texto de referência
-    // MAS só pular se já temos o valor principal
-    if (gotValue && !/^\d/.test(line) && !/^[A-ZÁÀÂÃÉÍÓÚa-z]/.test(line)) continue;
-
-    // ── Linha que começa com número: é o valor do resultado
-    if (/^\s*\d/.test(raw) && !gotValue && blockKey) {
-      const num = extractFirstNumber(line);
-      if (num) {
-        result[blockKey] = num;
-        gotValue = true;
-      }
-      continue;
+    if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l)) continue;
+    const tokens = l.split(/\s+/);
+    let ne = tokens.length;
+    for (let i = 0; i < tokens.length; i++) {
+      if (/^\d+([,.]\d+)?$/.test(tokens[i])) { ne = i; break; }
     }
-
-    // ── Linha com "Nome Valor ...": sub-exame no bloco (ex: painel lipídico, ferro)
-    if (!gotValue || !blockKey) {
-      const tokens = line.split(/\s+/);
-      let nameEnd = tokens.length;
-      for (let j = 0; j < tokens.length; j++) {
-        if (/^\d+([,\.]\d+)?$/.test(tokens[j])) { nameEnd = j; break; }
-      }
-      if (nameEnd > 0 && nameEnd < tokens.length) {
-        const namePart = tokens.slice(0, nameEnd).join(" ");
-        const key = resolveAlias(namePart);
-        if (key) {
-          const num = extractFirstNumber(tokens.slice(nameEnd).join(" "));
-          if (num && !result[key]) result[key] = num;
-        }
-      }
-    }
+    if (ne === 0 || ne >= tokens.length) continue;
+    const namePart = tokens.slice(0, ne).join(" ");
+    const key = resolvePanelAlias(namePart);
+    if (!key) continue;
+    const num = extractFirstNumber(tokens.slice(ne).join(" "));
+    if (num && !result[key]) result[key] = num;
   }
-
   return result;
 }
 
-/* ─── Identificadores de tipo de bloco ──────────────────────── */
-function isHemograma(block) {
-  return /^hemograma\s*,/i.test(block.trim());
-}
-function isIronBinding(block) {
-  return /^capacidade\s+total\s+de\s+liga/i.test(block.trim());
+/* ── Painel de ferro ─────────────────────────────────────────── */
+function parseFerroPanelBlock(block) {
+  const result = {};
+  const lines = block.split("\n");
+  let inResultados = false;
+  for (const line of lines) {
+    const l = line.trim();
+    if (!l) continue;
+    if (/resultados\s+anteriores/i.test(l)) { inResultados = true; }
+    if (inResultados) continue;
+    if (/capacidade\s+latente/i.test(l)) continue;
+    if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l)) continue;
+    const tokens = l.split(/\s+/);
+    let ne = tokens.length;
+    for (let i = 0; i < tokens.length; i++) {
+      if (/^\d+([,.]\d+)?$/.test(tokens[i])) { ne = i; break; }
+    }
+    if (ne === 0 || ne >= tokens.length) continue;
+    const key = resolvePanelAlias(tokens.slice(0, ne).join(" "));
+    if (!key) continue;
+    const num = extractFirstNumber(tokens.slice(ne).join(" "));
+    if (num && !result[key]) result[key] = num;
+  }
+  return result;
 }
 
-/* ─── Merge por data ─────────────────────────────────────────── */
-function mergeByDate(parsedList) {
+/* ── Coagulograma (TP e TTPA) ────────────────────────────────── */
+function parseCoagBlock(block, tipo) {
+  // tipo: "_TP" ou "_TTPA"
+  const result = {};
+  const lines = block.split("\n");
+  let inResultados = false;
+  for (const line of lines) {
+    const l = line.trim();
+    if (!l) continue;
+    if (/resultados\s+anteriores/i.test(l)) { inResultados = true; }
+    if (inResultados) continue;
+    if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l)) continue;
+    const tokens = l.split(/\s+/);
+    let ne = tokens.length;
+    for (let i = 0; i < tokens.length; i++) {
+      if (/^\d+([,.]\d+)?$/.test(tokens[i])) { ne = i; break; }
+    }
+    if (ne === 0 || ne >= tokens.length) continue;
+    const namePart = tokens.slice(0, ne).join(" ");
+    const key = resolvePanelAlias(namePart);
+    if (!key) continue;
+    const num = extractFirstNumber(tokens.slice(ne).join(" "));
+    if (num && !result[key]) result[key] = num;
+  }
+  return result;
+}
+
+/* ── Qualitativo (sorologias) ────────────────────────────────── */
+function parseQualBlock(block) {
+  // Varrer todas as linhas buscando resultado qualitativo,
+  // parando em "Resultados anteriores:"
+  const lines = block.split("\n");
+  let inResultados = false;
+  for (let i = 1; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (!l) continue;
+    if (/resultados\s+anteriores/i.test(l)) { inResultados = true; }
+    if (inResultados) continue;
+    // Ignorar linhas de metadados/cabeçalho
+    if (/^(coletado|liberado|resultado\s+valor|resultado\s*$|valores\s+de|metodo|metodologia|indice|cmia|quimio|imuno|elisa|eletro|turbidim)/i.test(l)) continue;
+    // Ignorar linhas de referência que começam com operador + número
+    if (/^[<>]\s*[\d,]/.test(l)) continue;
+    // Detectar padrão qualitativo
+    if (/n[ãa]o\s*reagente|n[ãa]o\s*houve|negati|positiv|inconclusiv/i.test(l)) {
+      return normalizeQual(l);
+    }
+    if (/^reagente$/i.test(l)) return "R";
+  }
+  return null;
+}
+
+/* ── Microbiológico ──────────────────────────────────────────── */
+function parseMicroBlock(block) {
+  const lines = block.split("\n");
+  let resultado = null;
+  let microorg = null;
+  for (const line of lines) {
+    const l = line.trim();
+    if (!l) continue;
+    // "Resultado: Negativo" ou "Resultado:Positivo"
+    const mRes = l.match(/^resultado\s*:\s*(.+)/i);
+    if (mRes) { resultado = mRes[1].trim(); continue; }
+    // "Microorganismo: Fungo filamentoso hialino..."
+    const mMicro = l.match(/^microorganismo\s*:\s*(.+)/i);
+    if (mMicro) { microorg = mMicro[1].trim(); continue; }
+    // Para BAAR/Bacterioscopia: resultado vem na linha de valor
+    if (/^(negativ|positiv|n[ãa]o\s*houve)/i.test(l) && !resultado) {
+      resultado = l;
+    }
+  }
+  return { resultado, microorg };
+}
+
+/* ── Exame simples genérico ──────────────────────────────────── */
+function parseSimpleExamBlock(block, blockKey) {
+  if (!blockKey) return {};
+  const result = {};
+  const lines = block.split("\n");
+  let inResultados = false;
+  let gotVal = false;
+  for (let i = 1; i < lines.length; i++) {
+    const raw = lines[i];
+    const l = raw.trim();
+    if (!l) continue;
+    if (/resultados\s+anteriores/i.test(l)) { inResultados = true; }
+    if (inResultados) continue;
+    if (/^(coletado|liberado|resultado\s+valores|resultado\s*$|valores\s+de\s+refer|metodo|metodologia)/i.test(l)) continue;
+    // Linha que começa com número (com ou sem espaço líder)
+    if (/^\s*\d/.test(raw) && !gotVal) {
+      const num = extractFirstNumber(l);
+      if (num) { result[blockKey] = num; gotVal = true; }
+      continue;
+    }
+    // Linha que começa com texto qualitativo (< 15.0, Não reagente, etc)
+    if (!gotVal && /^[<>]?\s*\d/.test(l)) {
+      const num = extractFirstNumber(l);
+      if (num) { result[blockKey] = num; gotVal = true; }
+    }
+  }
+  return result;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PIPELINE PRINCIPAL
+══════════════════════════════════════════════════════════════ */
+
+function processLabText(raw) {
+  const sanitized = sanitizeRawText(raw);
+  const clean = removeInstitutionalNoise(sanitized);
+  const blocks = splitIntoExamBlocks(clean);
+
+  // Estrutura acumulada por data
+  // byDate[dd/mm/aaaa] = { campos numéricos, _quals: {}, _micros: [] }
   const byDate = {};
-  for (const { date, data } of parsedList) {
-    if (!date) continue;
-    if (!byDate[date]) byDate[date] = {};
-    // Não sobrescreve chaves já preenchidas (primeiro bloco de cada exame vence)
+  let recognizedCount = 0;
+  let ignoredCount = 0;
+
+  function ensureDate(date) {
+    if (!byDate[date]) byDate[date] = { _quals: {}, _micros: [] };
+  }
+  function setField(date, key, val) {
+    ensureDate(date);
+    if (byDate[date][key] === undefined) byDate[date][key] = val;
+  }
+  function mergeData(date, data) {
+    ensureDate(date);
     for (const [k, v] of Object.entries(data)) {
       if (byDate[date][k] === undefined) byDate[date][k] = v;
     }
   }
-  return byDate;
+
+  for (const block of blocks) {
+    const date = extractCollectionDate(block);
+    if (!date) { ignoredCount++; continue; }
+
+    const headerLine = block.split("\n")[0].trim();
+    // Passar o header completo ao resolveBlockAlias
+    // (ele identifica o material biológico e extrai o nome correto)
+    const blockKey = resolveBlockAlias(headerLine);
+
+    if (!blockKey) { ignoredCount++; continue; }
+
+    // ── Hemograma
+    if (blockKey === "_HEMOGRAMA") {
+      const data = parseHemogramaBlock(block);
+      if (Object.keys(data).length) { mergeData(date, data); recognizedCount++; }
+      else ignoredCount++;
+      continue;
+    }
+
+    // ── Bilirrubinas
+    if (blockKey === "_BILIRRUBINAS") {
+      const data = parseBilirrubinaBlock(block);
+      if (Object.keys(data).length) { mergeData(date, data); recognizedCount++; }
+      else ignoredCount++;
+      continue;
+    }
+
+    // ── Proteínas totais
+    if (blockKey === "_PROTEINAS" || blockKey === "_ELETROFORESE") {
+      const data = parseProteinasBlock(block);
+      if (Object.keys(data).length) { mergeData(date, data); recognizedCount++; }
+      else ignoredCount++;
+      continue;
+    }
+
+    // ── Painel de ferro
+    if (blockKey === "_FERRO_PANEL") {
+      const data = parseFerroPanelBlock(block);
+      if (Object.keys(data).length) { mergeData(date, data); recognizedCount++; }
+      else ignoredCount++;
+      continue;
+    }
+
+    // ── Coagulograma TP
+    if (blockKey === "_TP") {
+      const data = parseCoagBlock(block, "_TP");
+      if (data["TP_seg"] || data["RNI"]) {
+        ensureDate(date);
+        if (data["TP_seg"])  setField(date, "TP_seg",  data["TP_seg"]);
+        if (data["RNI"])     setField(date, "RNI",     data["RNI"]);
+        if (data["TP_ativ"]) setField(date, "TP_ativ", data["TP_ativ"]);
+        recognizedCount++;
+      } else ignoredCount++;
+      continue;
+    }
+
+    // ── Coagulograma TTPA
+    if (blockKey === "_TTPA") {
+      const data = parseCoagBlock(block, "_TTPA");
+      if (data["TTPA_seg"] || data["TTPA_razao"]) {
+        ensureDate(date);
+        if (data["TTPA_seg"])   setField(date, "TTPA_seg",   data["TTPA_seg"]);
+        if (data["TTPA_razao"]) setField(date, "TTPA_razao", data["TTPA_razao"]);
+        recognizedCount++;
+      } else ignoredCount++;
+      continue;
+    }
+
+    // ── Sorologias qualitativas
+    if (blockKey && blockKey.startsWith("_QUAL_")) {
+      const qual = parseQualBlock(block);
+      if (qual) {
+        ensureDate(date);
+        if (byDate[date]._quals[blockKey] === undefined) {
+          byDate[date]._quals[blockKey] = qual;
+        }
+        recognizedCount++;
+      } else ignoredCount++;
+      continue;
+    }
+
+    // ── Microbiológicos
+    if (blockKey && blockKey.startsWith("_MICRO_")) {
+      const { resultado, microorg } = parseMicroBlock(block);
+      if (resultado) {
+        const material = extractMaterial(headerLine);
+        ensureDate(date);
+        byDate[date]._micros.push({ key: blockKey, material, resultado, microorg });
+        recognizedCount++;
+      } else ignoredCount++;
+      continue;
+    }
+
+    // ── Exame simples
+    const data = parseSimpleExamBlock(block, blockKey);
+    if (Object.keys(data).length) { mergeData(date, data); recognizedCount++; }
+    else ignoredCount++;
+  }
+
+  const output = formatLabsOutput(byDate);
+  return {
+    output,
+    recognizedCount,
+    ignoredCount,
+    dateCount: Object.keys(byDate).length,
+  };
 }
 
-/* ─── Formatação final ───────────────────────────────────────── */
-function formatLabsOutput(groupedByDate) {
-  const dates = Object.keys(groupedByDate).sort((a, b) =>
+/* ══════════════════════════════════════════════════════════════
+   FORMATAÇÃO DA SAÍDA
+══════════════════════════════════════════════════════════════ */
+
+function formatLabsOutput(byDate) {
+  const dates = Object.keys(byDate).sort((a,b) =>
     dateToSortKey(b).localeCompare(dateToSortKey(a))
   );
 
   const lines = ["#LABS:"];
+
   for (const date of dates) {
-    const data = groupedByDate[date];
+    const data = byDate[date];
     const parts = [];
 
     for (const key of OUTPUT_ORDER) {
+      // ── LEUCO composto
       if (key === "LEUCO") {
         if (!data["LEUCO"]) continue;
         const subs = LEUCO_SUBS.filter(s => data[s]);
         let str = `LEUCO ${data["LEUCO"]}`;
-        if (subs.length > 0) {
-          str += ` (${subs.map(s => `${LEUCO_LABELS[s]} ${data[s]}`).join(" / ")})`;
-        }
+        if (subs.length) str += ` (${subs.map(s => `${LEUCO_LABELS[s]} ${data[s]}`).join(" / ")})`;
         parts.push(str);
-      } else {
-        if (data[key] !== undefined) parts.push(`${key} ${data[key]}`);
+        continue;
+      }
+      // ── TP composto
+      if (key === "TP") {
+        if (!data["TP_seg"] && !data["RNI"]) continue;
+        let str = "TP";
+        if (data["TP_seg"]) str += ` ${data["TP_seg"]}s`;
+        if (data["RNI"]) str += ` (RNI ${data["RNI"]})`;
+        parts.push(str);
+        continue;
+      }
+      // ── TTPA composto
+      if (key === "TTPA") {
+        if (!data["TTPA_seg"] && !data["TTPA_razao"]) continue;
+        let str = "TTPA";
+        if (data["TTPA_seg"]) str += ` ${data["TTPA_seg"]}s`;
+        if (data["TTPA_razao"]) str += ` (razão ${data["TTPA_razao"]})`;
+        parts.push(str);
+        continue;
+      }
+      // ── Sorologias qualitativas
+      if (key.startsWith("_QUAL_")) {
+        const qual = data._quals && data._quals[key];
+        if (!qual) continue;
+        parts.push(`${QUAL_LABELS[key]} ${qual}`);
+        continue;
+      }
+      // ── Campo simples
+      if (data[key] !== undefined) {
+        parts.push(`${key} ${data[key]}`);
       }
     }
 
-    if (parts.length > 0) lines.push(`${date}: ${parts.join(" / ")}`);
+    // ── Microbiológicos (após todos os outros)
+    if (data._micros && data._micros.length) {
+      for (const m of data._micros) {
+        const label = MICRO_LABELS[m.key] || m.key;
+        const mat = m.material ? `(${m.material})` : "";
+        const qual = normalizeQual(m.resultado);
+        let str = `${label}${mat} ${qual}`;
+        if (qual === "POS" && m.microorg) {
+          str += `: ${m.microorg.slice(0, 40)}`;
+        }
+        parts.push(str);
+      }
+    }
+
+    if (parts.length) lines.push(`${date}: ${parts.join(" / ")}`);
   }
 
   return lines.join("\n");
 }
 
-/* ─── Pipeline principal ─────────────────────────────────────── */
-function processLabText(raw) {
-  // 1. Sanitizar
-  const sanitized = sanitizeRawText(raw);
-  // 2. Remover ruído institucional
-  const clean = removeInstitutionalNoise(sanitized);
-  // 3. Segmentar
-  const blocks = splitIntoExamBlocks(clean);
-
-  const parsed = [];
-  let recognizedCount = 0;
-  let ignoredCount = 0;
-
-  for (const block of blocks) {
-    const date = extractCollectionDate(block);
-
-    // Blocos sem data (ex: TFGE) → ignorar silenciosamente
-    if (!date) { ignoredCount++; continue; }
-
-    let data = {};
-    if (isHemograma(block)) {
-      data = parseHemogramaBlock(block);
-    } else if (isIronBinding(block)) {
-      data = parseIronBindingBlock(block);
-    } else {
-      data = parseSimpleExamBlock(block);
-    }
-
-    const keys = Object.keys(data);
-    if (keys.length > 0) {
-      recognizedCount++;
-      parsed.push({ date, data });
-    } else {
-      ignoredCount++;
-    }
-  }
-
-  const grouped = mergeByDate(parsed);
-  const output = formatLabsOutput(grouped);
-
-  return {
-    output,
-    recognizedCount,
-    ignoredCount,
-    dateCount: Object.keys(grouped).length,
-  };
-}
+/* ══════════════════════════════════════════════════════════════
+   EXEMPLO v2 (cobre todos os novos tipos)
+══════════════════════════════════════════════════════════════ */
+const EXEMPLO = `HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
+SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
+Diretor Técnico: Dra. Patricia Mantovani - CRF-SP: 20292
+Nº CEVS: 355030890-861-014006-1-4 CRF-SP:61205
+Av. Ibirapuera 981 - Indianópolis - 04029-000 - São Paulo - SP
+Emissão: 12/08/2025-06:54
+Pedido: 250243990
+Prontuário: 1466847 Paciente: DENIZE CRISTINA NETO ALVES
+Data Nasc.: 15/09/1972 Sexo:F Idade: 52a 10m 27d Data Solicitação: 06/08/2025 - 09:48
+Solicitante: Dr.(a): ANA PAULA OKAMOTO - CRM N°: 226743
+Setor solicitante: AMBULATORIO DE DERMATOLOGIA
+Responsável: MARISA TAMIKO OGURA - CRF: 16933
+Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
+HEMOGRAMA,SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:35
+ERITROGRAMA
+Resultados Valores de referência Metodologia
+Hemoglobina 13,7 g/dL 12,0 a 16,0 g/dL morfológico quando aplicável
+Hematócrito 43,3 % 35,0 a 47,0 %
+VCM 83,5 fL 80,0 a 100,0 fL
+HCM 26,4 pg 27,0 a 32,0 pg
+CHCM 31,6 g/dL 32,0 a 37,0 g/dL
+RDW-CV 15,3 % 9,5 a 14,8 %
+LEUCOGRAMA
+LEUCÓCITOS 8,39 mil/mm³ 4,00 a 11,00 mil/mm³ Automatizada
+Neutrófilos 72,20 % 6,06 mil/mm³ 1,7 a 8 mil/mm³
+Eosinófilos 1,40 % 0,12 mil/mm³ 0,05 a 0,50 mil/mm³
+Basófilos 0,40 % 0,03 mil/mm³ 0,00 a 0,10 mil/mm³
+Linfócitos 20,30 % 1,70 mil/mm³ 0,90 a 2,90 mil/mm³
+Monócitos 5,70 % 0,48 mil/mm³ 0,30 a 0,90 mil/mm³
+PLAQUETAS Valores de referência Metodologia
+Resultados: 314 mil/mm³ 150 a 400 mil/mm³ Automatizada
+MARISA TAMIKO OGURA
+CRF 16933
+GLICOSE, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+91 mg/dL 75 a 99 mg/dL Enzimático
+Resultados anteriores:
+93 (12/12/2024)
+HEMOGLOBINA GLICADA, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 15:02
+Resultado Valores de referência Método
+5,5 % 4,3 a 6,5 % HPLC
+Resultados anteriores:
+URÉIA, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+29 mg/dL 17 a 43 mg/dL Enzimático
+Resultados anteriores:
+CREATININA, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
+Resultado Valores de referência Método
+0,98 mg/dL 0,70 a 1,10 mg/dL Colorimétrico
+Resultados anteriores:
+TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)
+Resultado Valores de referência* Método
+TFGE para etnia negra: 77 mL/min/1,73m2 >90 Fórmula CKD-EPI
+SÓDIO, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+138 mEq/L 136 a 145 mEq/L Íon eletrodo seletivo
+Resultados anteriores:
+POTÁSSIO, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+4,2 mEq/L 3,5 a 5,1 mEq/L Íon eletrodo seletivo
+Resultados anteriores:
+ASPARTATO AMINO TRANSFERASE (TGO), SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
+Resultado Valores de referência Método
+14 U/L 13 a 39 U/L Enzimático
+Resultados anteriores:
+ALANINO AMINO TRANSFERASE (TGP), SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+10 U/L 0 a 35 U/L Enzimático
+Resultados anteriores:
+FOSFATASE ALCALINA (FAL), SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
+Resultado Valores de referência Método
+77 U/L 30 a 120 U/L Enzimático
+Resultados anteriores:
+GAMA GT (GGT), SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+24 U/L 9 a 64 U/L Enzimático
+Resultados anteriores:
+BILIRRUBINAS TOTAL E FRAÇÕES, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
+Resultado Valores de referência Método
+Bilirrubina direta 0,07 mg/dl 0,00 a 0,20 mg/dL Colorimétrico
+Bilirrubinas totais 0,44 mg/dl 0,30 a 1,20 mg/dL
+Bilirrubina indireta 0,37 mg/dl
+PROTEÍNA C REATIVA, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+1,36 mg/dL 0,00 a 0,50 mg/dL Imuno-turbidimétrico
+Resultados anteriores:
+FERRO, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
+Resultado Valores de referência Método
+104 µg/dL 60 a 180 µg/dL Colorimétrico
+Resultados anteriores:
+CAPACIDADE TOTAL DE LIGAÇÃO DE FERRO, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 00:00
+Resultado Valores de referência Método Resultados anteriores
+Capacidade total de ligação de ferro 465,00 µg/dL 225 a 535 µg/dL Colorimétrico
+Capacidade latente de ligação de ferro 361,00 µg/dL 155 a 355 µg/dL
+Índice de saturação de transferrina 22,37 % 20 a 50 %
+TIROXINA LIVRE (T4L), SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 13:53
+Resultado Valores de referência Método
+0,79 ng/dl 0,61 a 1,12 ng/dl Quimioluminescência
+Resultados anteriores:
+HORMÔNIO TIREOTRÓFICO (TSH), SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:38
+Resultado Valores de referência Método
+ 1,05 µUI/ml 0,34 a 5,33 µUI/ml Quimioluminescência
+Resultados anteriores:
+FERRITINA, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 13:53
+Resultado Valores de referência Método
+39,0 ng/ml Homens: 23,9 a 336,2 ng/ml Quimioluminescência
+Resultados anteriores:
+ÁCIDO FÓLICO, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 13:53
+Resultado Valores de referência Método
+10,3 ng/ml 3,1 a 19,9 ng/ml Quimiluminescência
+Resultados anteriores:
+25 OH VITAMINA D, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:05
+Resultado Valores de referência Método
+22,2 ng/mL < 10,0 ng/mL Deficiência CMIA
+Resultados anteriores:
+TEMPO DE PROTROMBINA, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:21
+Resultado Valores de referência Método
+Tempo de protrombina 11,9 seg 12,5 a 14,5 seg Coagulométrico
+Atividade 89,0 % igual ou > 70%
+RNI 1,090
+Resultados anteriores (INR):
+TEMPO DE TROMBOPLASTINA PARCIAL ATIVADO, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:21
+Resultado Valores de referência Método
+TTPA 31,0 seg 23,0 a 34,0 seg Coagulorimétrico
+Razão 1,05 0,85 a 1,26
+Resultados anteriores (razão):
+HBsAG, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:45
+Resultado Valores de referência Método
+Não Reagente
+Índice: 0,17 S/CO
+< 0,80 S/CO Não reagente
+Resultados anteriores:
+HCV, PESQUISA DE ANTICORPOS, SANGUE
+Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:45
+Resultado Valores de referência Método
+Não reagente
+Índice: 0,10 S/CO
+Resultados anteriores:
+HIV, anticorpos e antígeno p24, SANGUE
+Coletado em:06/08/2025 09:58 Liberado em: 06/08/2025 11:50
+Resultado Valor de referência Método
+Não reagente
+Índice: 0,25 S/CO
+Resultados anteriores:
+CULTURA AEROBIA RESPIRATORIO
+INFERIOR, LAVADO BRONCOALVEOLAR
+Coletado: 28/03/2024 12:56 Liberado:08/04/2024 09:23
+Resultado:Não houve crescimento de prováveis patógenos
+Local Anatômico da coleta:
+CULTURA DE FUNGO RESPIRATORIO
+INFERIOR, LAVADO BRONCOALVEOLAR
+Coletado: 28/03/2024 12:56 Liberado:05/04/2024 06:59
+Resultado:Positivo
+Local Anatômico da coleta:
+Microorganismo: Fungo filamentoso hialino, sugestivo de contaminante
+PESQUISA DE BAAR, LAVADO BRONCOALVEOLAR
+Coletado em: 28/03/2024 13:09 Liberado em: 01/04/2024 11:56
+Resultado Valores de referência Método
+Negativa Negativa Coloração de Ziehl-Nielsen`;
 
 /* ══════════════════════════════════════════════════════════════
    UI
@@ -1492,18 +1795,14 @@ const liveRegion = document.getElementById("live-region");
 
 function hideAllMsgs() {
   [msgError, msgWarn, msgSuccess, msgInfo].forEach(m => {
-    m.classList.remove("visible");
-    m.textContent = "";
+    m.classList.remove("visible"); m.textContent = "";
   });
 }
-
 function showMsg(el, text) {
   hideAllMsgs();
-  el.textContent = text;
-  el.classList.add("visible");
+  el.textContent = text; el.classList.add("visible");
   liveRegion.textContent = text;
 }
-
 function announce(text) {
   liveRegion.textContent = "";
   requestAnimationFrame(() => { liveRegion.textContent = text; });
@@ -1513,22 +1812,16 @@ btnProc.addEventListener("click", () => {
   const raw = elInput.value.trim();
   if (!raw) {
     showMsg(msgError, "Nenhum texto informado. Cole o conteúdo do laudo do IAMSPE no campo acima.");
-    elInput.focus();
-    return;
+    elInput.focus(); return;
   }
-
   hideAllMsgs();
-
   let result;
-  try {
-    result = processLabText(raw);
-  } catch (err) {
-    showMsg(msgError, `Erro interno no processamento: ${err.message}. Tente novamente ou reporte o problema.`);
+  try { result = processLabText(raw); }
+  catch (err) {
+    showMsg(msgError, `Erro interno no processamento: ${err.message}.`);
     return;
   }
-
   const hasOutput = result.output && result.output !== "#LABS:" && result.dateCount > 0;
-
   if (!hasOutput) {
     showMsg(msgError,
       "Nenhum exame reconhecido no texto informado. " +
@@ -1537,55 +1830,40 @@ btnProc.addEventListener("click", () => {
     elSection.hidden = true;
     elOutput.classList.remove("visible");
     btnCopy.disabled = true;
-    btnCopy.setAttribute("aria-disabled", "true");
+    btnCopy.setAttribute("aria-disabled","true");
     return;
   }
-
-  // Mostrar saída
   elOutput.textContent = result.output;
   elOutput.classList.add("visible");
   elSection.hidden = false;
   btnCopy.disabled = false;
-  btnCopy.setAttribute("aria-disabled", "false");
-
-  // Feedback
-  let warnText = "";
-  if (result.ignoredCount > 0) {
-    warnText = `${result.ignoredCount} bloco(s) não reconhecido(s) foram ignorados. Verifique se o texto está completo.`;
-  }
-
-  const successText = `${result.dateCount} data(s) encontrada(s) · ${result.recognizedCount} bloco(s) processado(s) com sucesso.`;
+  btnCopy.setAttribute("aria-disabled","false");
+  const successText = `${result.dateCount} data(s) · ${result.recognizedCount} bloco(s) processado(s).`;
   showMsg(msgSuccess, successText);
-  if (warnText) {
-    // Também mostra aviso
+  if (result.ignoredCount > 0) {
     setTimeout(() => {
-      msgWarn.textContent = warnText;
+      msgWarn.textContent = `${result.ignoredCount} bloco(s) não reconhecido(s) ou fora do escopo foram ignorados.`;
       msgWarn.classList.add("visible");
-    }, 100);
+    }, 80);
   }
-
   announce(`Exames processados. ${successText}`);
-  elSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  elSection.scrollIntoView({ behavior:"smooth", block:"start" });
 });
 
 btnCopy.addEventListener("click", async () => {
   const text = elOutput.textContent;
   if (!text) return;
-
   try {
     await navigator.clipboard.writeText(text);
     btnCopy.textContent = "✓ Copiado!";
     announce("Saída copiada para a área de transferência.");
     setTimeout(() => { btnCopy.textContent = "Copiar saída"; }, 2000);
   } catch {
-    // Fallback
     const range = document.createRange();
     range.selectNodeContents(elOutput);
     const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    announce("Selecione o texto e copie manualmente com Ctrl+C ou Cmd+C.");
-    showMsg(msgInfo, "Não foi possível copiar automaticamente. Selecione o texto e use Ctrl+C / Cmd+C.");
+    sel.removeAllRanges(); sel.addRange(range);
+    showMsg(msgInfo, "Selecione o texto e use Ctrl+C / Cmd+C.");
   }
 });
 
@@ -1595,7 +1873,7 @@ btnLimpar.addEventListener("click", () => {
   elOutput.classList.remove("visible");
   elSection.hidden = true;
   btnCopy.disabled = true;
-  btnCopy.setAttribute("aria-disabled", "true");
+  btnCopy.setAttribute("aria-disabled","true");
   hideAllMsgs();
   elInput.focus();
   announce("Campo limpo.");
@@ -1606,7 +1884,7 @@ btnExemplo.addEventListener("click", () => {
   hideAllMsgs();
   showMsg(msgInfo, "Exemplo carregado. Clique em Processar para ver o resultado.");
   elInput.focus();
-  announce("Texto de exemplo carregado no campo principal.");
+  announce("Texto de exemplo carregado.");
 });
 
 /* ─── Tabs ───────────────────────────────────────────────────── */
@@ -1615,27 +1893,24 @@ const panels = Array.from(document.querySelectorAll("[role='tabpanel']"));
 
 function activateTab(tab) {
   tabs.forEach(t => {
-    const selected = t === tab;
-    t.setAttribute("aria-selected", String(selected));
-    t.tabIndex = selected ? 0 : -1;
+    const sel = t === tab;
+    t.setAttribute("aria-selected", String(sel));
+    t.tabIndex = sel ? 0 : -1;
   });
   panels.forEach(p => {
-    const active = p.id === tab.getAttribute("aria-controls");
-    p.classList.toggle("active", active);
+    p.classList.toggle("active", p.id === tab.getAttribute("aria-controls"));
   });
 }
-
 tabs.forEach(tab => {
   tab.addEventListener("click", () => activateTab(tab));
   tab.addEventListener("keydown", e => {
     let idx = tabs.indexOf(e.currentTarget);
-    if (e.key === "ArrowRight") { e.preventDefault(); idx = (idx + 1) % tabs.length; }
-    else if (e.key === "ArrowLeft") { e.preventDefault(); idx = (idx - 1 + tabs.length) % tabs.length; }
-    else if (e.key === "Home") { e.preventDefault(); idx = 0; }
-    else if (e.key === "End") { e.preventDefault(); idx = tabs.length - 1; }
+    if      (e.key === "ArrowRight") { e.preventDefault(); idx = (idx+1) % tabs.length; }
+    else if (e.key === "ArrowLeft")  { e.preventDefault(); idx = (idx-1+tabs.length) % tabs.length; }
+    else if (e.key === "Home")       { e.preventDefault(); idx = 0; }
+    else if (e.key === "End")        { e.preventDefault(); idx = tabs.length-1; }
     else return;
-    tabs[idx].focus();
-    activateTab(tabs[idx]);
+    tabs[idx].focus(); activateTab(tabs[idx]);
   });
 });
 </script>
