@@ -1,2486 +1,313 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IAMSPE Labs — Padronizador de Exames Laboratoriais</title>
-    <style>
-      /* ── Google Fonts ──────────────────────────────────────────── */
-      @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IAMSPE Labs — Padronizador de Exames Laboratoriais</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-      /* ── Design tokens ─────────────────────────────────────────── */
-      :root {
-        --verde-escuro: #0f6a38;
-        --verde-escuro-2: #0a5029;
-        --verde-apoio: #79b84a;
-        --ciano: #18a9b7;
-        --ciano-escuro: #0f7d89;
-        --fundo: #f7faf8;
-        --fundo-card: #ffffff;
-        --texto: #163022;
-        --texto-suave: #4a6555;
-        --borda: #cdd9d2;
-        --borda-forte: #a8c2b4;
-        --erro: #c0392b;
-        --aviso: #8a6000;
-        --aviso-bg: #fffbeb;
+:root {
+  --verde-escuro:   #0F6A38;
+  --verde-escuro-2: #0a5029;
+  --verde-apoio:    #79B84A;
+  --ciano:          #18A9B7;
+  --ciano-escuro:   #0f7d89;
+  --fundo:          #F7FAF8;
+  --fundo-card:     #ffffff;
+  --texto:          #163022;
+  --texto-suave:    #4a6555;
+  --borda:          #CDD9D2;
+  --borda-forte:    #a8c2b4;
+  --erro:           #c0392b;
+  --aviso:          #8a6000;
+  --aviso-bg:       #fffbeb;
+  --font-ui:    'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'Lora', serif;
+  --font-mono:  'DM Mono', monospace;
+  --radius:     8px;
+  --radius-lg:  12px;
+  --shadow:     0 1px 4px rgba(15,106,56,.10), 0 4px 16px rgba(15,106,56,.06);
+  --transition: .18s cubic-bezier(.4,0,.2,1);
+}
 
-        --font-ui: "Plus Jakarta Sans", sans-serif;
-        --font-serif: "Lora", serif;
-        --font-mono: "DM Mono", monospace;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-ui); background: var(--fundo); color: var(--texto); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+a { color: var(--ciano-escuro); }
+a:focus-visible { outline: 3px solid var(--ciano); outline-offset: 2px; border-radius: 3px; }
 
-        --radius: 8px;
-        --radius-lg: 12px;
-        --shadow:
-          0 1px 4px rgba(15, 106, 56, 0.1), 0 4px 16px rgba(15, 106, 56, 0.06);
-        --shadow-sm: 0 1px 3px rgba(15, 106, 56, 0.08);
-        --transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-      }
+/* ── Skip link ── */
+.skip-link { position: absolute; top: -9999px; left: 8px; background: var(--verde-escuro); color: #fff; padding: 8px 14px; border-radius: var(--radius); font-size: .875rem; font-weight: 600; z-index: 9999; text-decoration: none; }
+.skip-link:focus { top: 8px; }
 
-      /* ── Reset / base ───────────────────────────────────────────── */
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      html {
-        scroll-behavior: smooth;
-      }
-      body {
-        font-family: var(--font-ui);
-        background: var(--fundo);
-        color: var(--texto);
-        line-height: 1.6;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      a {
-        color: var(--ciano-escuro);
-      }
-      a:focus-visible {
-        outline: 3px solid var(--ciano);
-        outline-offset: 2px;
-        border-radius: 3px;
-      }
+/* ── Header ── */
+header { background: var(--verde-escuro); color: #fff; padding: 0 1.5rem; border-bottom: 3px solid var(--verde-apoio); }
+.header-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 1rem; padding: 1rem 0; }
+.header-badge { background: var(--verde-apoio); color: var(--verde-escuro-2); font-family: var(--font-mono); font-size: .7rem; font-weight: 500; padding: 3px 8px; border-radius: 4px; letter-spacing: .05em; white-space: nowrap; }
+.header-titles { flex: 1; }
+.header-titles h1 { font-family: var(--font-serif); font-size: 1.2rem; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; }
+.header-titles p { font-size: .78rem; opacity: .82; margin-top: 1px; }
 
-      /* ── Skip-link ─────────────────────────────────────────────── */
-      .skip-link {
-        position: absolute;
-        top: -9999px;
-        left: 8px;
-        background: var(--verde-escuro);
-        color: #fff;
-        padding: 8px 14px;
-        border-radius: var(--radius);
-        font-size: 0.875rem;
-        font-weight: 600;
-        z-index: 9999;
-        text-decoration: none;
-      }
-      .skip-link:focus {
-        top: 8px;
-      }
+/* ── Nav tabs ── */
+nav { background: var(--verde-escuro-2); border-bottom: 1px solid rgba(255,255,255,.08); }
+.nav-inner { max-width: 900px; margin: 0 auto; display: flex; padding: 0 1.5rem; }
+[role="tab"] { font-family: var(--font-ui); font-size: .8rem; font-weight: 500; color: rgba(255,255,255,.72); background: transparent; border: none; padding: .7rem 1.1rem; cursor: pointer; letter-spacing: .02em; border-bottom: 3px solid transparent; transition: color var(--transition), border-color var(--transition); white-space: nowrap; }
+[role="tab"]:hover { color: #fff; }
+[role="tab"][aria-selected="true"] { color: #fff; border-bottom-color: var(--ciano); }
+[role="tab"]:focus-visible { outline: 3px solid var(--ciano); outline-offset: -2px; border-radius: 3px 3px 0 0; }
 
-      /* ── Header ─────────────────────────────────────────────────── */
-      header {
-        background: var(--verde-escuro);
-        color: #fff;
-        padding: 0 1.5rem;
-        border-bottom: 3px solid var(--verde-apoio);
-      }
-      .header-inner {
-        max-width: 900px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem 0;
-      }
-      .header-badge {
-        background: var(--verde-apoio);
-        color: var(--verde-escuro-2);
-        font-family: var(--font-mono);
-        font-size: 0.7rem;
-        font-weight: 500;
-        padding: 3px 8px;
-        border-radius: 4px;
-        letter-spacing: 0.05em;
-        white-space: nowrap;
-      }
-      .header-titles {
-        flex: 1;
-      }
-      .header-titles h1 {
-        font-family: var(--font-serif);
-        font-size: 1.2rem;
-        font-weight: 600;
-        line-height: 1.3;
-        letter-spacing: -0.01em;
-      }
-      .header-titles p {
-        font-size: 0.78rem;
-        opacity: 0.82;
-        margin-top: 1px;
-        letter-spacing: 0.01em;
-      }
+/* ── Main ── */
+main { max-width: 900px; margin: 0 auto; width: 100%; padding: 2rem 1.5rem; flex: 1; }
+[role="tabpanel"] { display: none; }
+[role="tabpanel"].active { display: block; }
 
-      /* ── Nav tabs ───────────────────────────────────────────────── */
-      nav {
-        background: var(--verde-escuro-2);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .nav-inner {
-        max-width: 900px;
-        margin: 0 auto;
-        display: flex;
-        gap: 0;
-        padding: 0 1.5rem;
-      }
-      [role="tab"] {
-        font-family: var(--font-ui);
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.72);
-        background: transparent;
-        border: none;
-        padding: 0.7rem 1.1rem;
-        cursor: pointer;
-        letter-spacing: 0.02em;
-        border-bottom: 3px solid transparent;
-        transition:
-          color var(--transition),
-          border-color var(--transition);
-        white-space: nowrap;
-      }
-      [role="tab"]:hover {
-        color: #fff;
-      }
-      [role="tab"][aria-selected="true"] {
-        color: #fff;
-        border-bottom-color: var(--ciano);
-      }
-      [role="tab"]:focus-visible {
-        outline: 3px solid var(--ciano);
-        outline-offset: -2px;
-        border-radius: 3px 3px 0 0;
-      }
+/* ── Card ── */
+.card { background: var(--fundo-card); border: 1px solid var(--borda); border-radius: var(--radius-lg); padding: 1.75rem; box-shadow: var(--shadow); }
+.card + .card { margin-top: 1.25rem; }
 
-      /* ── Main ───────────────────────────────────────────────────── */
-      main {
-        max-width: 900px;
-        margin: 0 auto;
-        width: 100%;
-        padding: 2rem 1.5rem;
-        flex: 1;
-      }
-      [role="tabpanel"] {
-        display: none;
-      }
-      [role="tabpanel"].active {
-        display: block;
-      }
-      [role="tabpanel"]:focus-visible {
-        outline: none;
-      }
+/* ── Headings ── */
+.section-title { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 600; color: var(--verde-escuro); margin-bottom: .5rem; }
+.section-desc { font-size: .85rem; color: var(--texto-suave); margin-bottom: 1.25rem; line-height: 1.55; }
 
-      /* ── Card ───────────────────────────────────────────────────── */
-      .card {
-        background: var(--fundo-card);
-        border: 1px solid var(--borda);
-        border-radius: var(--radius-lg);
-        padding: 1.75rem;
-        box-shadow: var(--shadow);
-      }
-      .card + .card {
-        margin-top: 1.25rem;
-      }
+/* ── Form ── */
+label { display: block; font-size: .825rem; font-weight: 600; color: var(--texto); margin-bottom: .4rem; }
+textarea, .output-box { width: 100%; font-family: var(--font-mono); font-size: .82rem; border: 1.5px solid var(--borda); border-radius: var(--radius); background: #fafcfb; color: var(--texto); padding: .875rem 1rem; resize: vertical; transition: border-color var(--transition), box-shadow var(--transition); line-height: 1.6; }
+textarea { min-height: 200px; }
+textarea:focus { outline: none; border-color: var(--verde-escuro); box-shadow: 0 0 0 3px rgba(15,106,56,.15); }
+textarea::placeholder { color: #8fac9b; font-style: italic; }
 
-      /* ── Section headings ───────────────────────────────────────── */
-      .section-title {
-        font-family: var(--font-serif);
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: var(--verde-escuro);
-        margin-bottom: 0.5rem;
-      }
-      .section-desc {
-        font-size: 0.85rem;
-        color: var(--texto-suave);
-        margin-bottom: 1.25rem;
-        line-height: 1.55;
-      }
+/* ── Output ── */
+.output-box { min-height: 80px; white-space: pre-wrap; word-break: break-word; background: #f4faf6; user-select: all; cursor: text; display: none; }
+.output-box.visible { display: block; }
 
-      /* ── Labels / form ──────────────────────────────────────────── */
-      label {
-        display: block;
-        font-size: 0.825rem;
-        font-weight: 600;
-        color: var(--texto);
-        margin-bottom: 0.4rem;
-      }
-      label span.req {
-        color: var(--erro);
-        margin-left: 2px;
-      }
+/* ── Buttons ── */
+.btn-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.btn { font-family: var(--font-ui); font-size: .825rem; font-weight: 600; padding: .55rem 1.2rem; border-radius: var(--radius); border: 2px solid transparent; cursor: pointer; letter-spacing: .02em; transition: background var(--transition), color var(--transition), border-color var(--transition); white-space: nowrap; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; }
+.btn:focus-visible { outline: 3px solid var(--ciano); outline-offset: 2px; }
+.btn-primary { background: var(--verde-escuro); color: #fff; }
+.btn-primary:hover { background: var(--verde-escuro-2); }
+.btn-secondary { background: transparent; color: var(--verde-escuro); border-color: var(--borda-forte); }
+.btn-secondary:hover { background: #edf5ef; border-color: var(--verde-escuro); }
+.btn-copy { background: var(--ciano); color: #fff; }
+.btn-copy:hover { background: var(--ciano-escuro); }
+.btn-copy:disabled { background: var(--borda); color: #888; cursor: not-allowed; }
+.btn-danger { background: transparent; color: var(--erro); border-color: #e0bcbb; }
+.btn-danger:hover { background: #fdf1f0; border-color: var(--erro); }
 
-      textarea,
-      .output-box {
-        width: 100%;
-        font-family: var(--font-mono);
-        font-size: 0.82rem;
-        border: 1.5px solid var(--borda);
-        border-radius: var(--radius);
-        background: #fafcfb;
-        color: var(--texto);
-        padding: 0.875rem 1rem;
-        resize: vertical;
-        transition:
-          border-color var(--transition),
-          box-shadow var(--transition);
-        line-height: 1.6;
-      }
-      textarea {
-        min-height: 200px;
-      }
-      textarea:focus {
-        outline: none;
-        border-color: var(--verde-escuro);
-        box-shadow: 0 0 0 3px rgba(15, 106, 56, 0.15);
-      }
-      textarea::placeholder {
-        color: #8fac9b;
-        font-style: italic;
-      }
+/* ── Mensagens ── */
+.status-area { margin-top: 1rem; }
+.msg { font-size: .825rem; padding: .65rem 1rem; border-radius: var(--radius); border-left: 4px solid; display: none; }
+.msg.visible { display: block; }
+.msg-success { background: #edfaf2; border-color: var(--verde-apoio); color: #195c30; }
+.msg-error   { background: #fdf1f0; border-color: var(--erro);        color: #8b1c14; }
+.msg-warn    { background: var(--aviso-bg); border-color: #c9a000;    color: var(--aviso); }
+.msg-info    { background: #e8f8fa; border-color: var(--ciano);       color: #0f616b; }
 
-      /* ── Output box ─────────────────────────────────────────────── */
-      .output-box {
-        min-height: 80px;
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: #f4faf6;
-        border-color: var(--borda);
-        user-select: all;
-        cursor: text;
-        display: none;
-      }
-      .output-box.visible {
-        display: block;
-      }
+/* ── Output section ── */
+.output-section { margin-top: 1.5rem; }
+.output-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
 
-      /* ── Botões ─────────────────────────────────────────────────── */
-      .btn-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-        margin-top: 1rem;
-      }
-      .btn {
-        font-family: var(--font-ui);
-        font-size: 0.825rem;
-        font-weight: 600;
-        padding: 0.55rem 1.2rem;
-        border-radius: var(--radius);
-        border: 2px solid transparent;
-        cursor: pointer;
-        letter-spacing: 0.02em;
-        transition:
-          background var(--transition),
-          color var(--transition),
-          border-color var(--transition),
-          box-shadow var(--transition);
-        white-space: nowrap;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        min-height: 40px; /* alvo confortável */
-      }
-      .btn:focus-visible {
-        outline: 3px solid var(--ciano);
-        outline-offset: 2px;
-      }
-      .btn-primary {
-        background: var(--verde-escuro);
-        color: #fff;
-      }
-      .btn-primary:hover {
-        background: var(--verde-escuro-2);
-      }
-      .btn-primary:active {
-        box-shadow: 0 0 0 3px rgba(15, 106, 56, 0.25);
-      }
+/* ── Disclaimer banner ── */
+.disclaimer-banner { background: var(--aviso-bg); border: 1px solid #e0c97a; border-left: 4px solid #c9a000; border-radius: var(--radius); padding: .75rem 1rem; font-size: .8rem; color: var(--aviso); line-height: 1.55; margin-bottom: 1.5rem; display: flex; gap: .5rem; align-items: flex-start; }
+.disclaimer-banner svg { flex-shrink: 0; margin-top: 2px; }
 
-      .btn-secondary {
-        background: transparent;
-        color: var(--verde-escuro);
-        border-color: var(--borda-forte);
-      }
-      .btn-secondary:hover {
-        background: #edf5ef;
-        border-color: var(--verde-escuro);
-      }
+/* ── Como usar ── */
+.step-list { list-style: none; counter-reset: steps; margin-top: 1rem; }
+.step-list li { counter-increment: steps; display: flex; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid var(--borda); font-size: .875rem; align-items: flex-start; }
+.step-list li:last-child { border-bottom: none; }
+.step-list li::before { content: counter(steps); min-width: 28px; height: 28px; background: var(--verde-escuro); color: #fff; font-size: .75rem; font-weight: 700; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: var(--font-mono); }
+.example-block { background: #f0f7f2; border: 1px solid var(--borda); border-radius: var(--radius); padding: 1rem; font-family: var(--font-mono); font-size: .78rem; white-space: pre-wrap; word-break: break-word; color: var(--texto); margin-top: .75rem; line-height: 1.7; }
 
-      .btn-copy {
-        background: var(--ciano);
-        color: #fff;
-      }
-      .btn-copy:hover {
-        background: var(--ciano-escuro);
-      }
-      .btn-copy:disabled {
-        background: var(--borda);
-        color: #888;
-        cursor: not-allowed;
-      }
+/* ── Avisos ── */
+.aviso-card h2 { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; color: var(--verde-escuro); margin-bottom: .75rem; margin-top: 1.25rem; }
+.aviso-card h2:first-child { margin-top: 0; }
+.aviso-card p { font-size: .875rem; line-height: 1.7; color: var(--texto-suave); margin-bottom: .6rem; }
+.aviso-card p strong { color: var(--texto); }
 
-      .btn-danger {
-        background: transparent;
-        color: var(--erro);
-        border-color: #e0bcbb;
-      }
-      .btn-danger:hover {
-        background: #fdf1f0;
-        border-color: var(--erro);
-      }
+/* ── Footer ── */
+footer { border-top: 1px solid var(--borda); background: #eef4f0; padding: .9rem 1.5rem; text-align: center; }
+.footer-inner { max-width: 900px; margin: 0 auto; font-size: .78rem; color: var(--texto-suave); line-height: 1.5; }
+.footer-inner strong { color: var(--texto); }
 
-      /* ── Mensagens de status ────────────────────────────────────── */
-      .status-area {
-        margin-top: 1rem;
-      }
-      .msg {
-        font-size: 0.825rem;
-        padding: 0.65rem 1rem;
-        border-radius: var(--radius);
-        border-left: 4px solid;
-        display: none;
-      }
-      .msg.visible {
-        display: block;
-      }
-      .msg-success {
-        background: #edfaf2;
-        border-color: var(--verde-apoio);
-        color: #195c30;
-      }
-      .msg-error {
-        background: #fdf1f0;
-        border-color: var(--erro);
-        color: #8b1c14;
-      }
-      .msg-warn {
-        background: var(--aviso-bg);
-        border-color: #c9a000;
-        color: var(--aviso);
-      }
-      .msg-info {
-        background: #e8f8fa;
-        border-color: var(--ciano);
-        color: #0f616b;
-      }
+/* ── Live region ── */
+#live-region { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-      /* ── Output section ─────────────────────────────────────────── */
-      .output-section {
-        margin-top: 1.5rem;
-      }
-      .output-label-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.4rem;
-      }
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  main { padding: 1.25rem 1rem; }
+  .card { padding: 1.25rem; }
+  .header-inner { flex-direction: column; align-items: flex-start; gap: .5rem; }
+  .nav-inner { overflow-x: auto; padding-bottom: 0; }
+  [role="tab"] { padding: .65rem .85rem; font-size: .75rem; }
+}
+</style>
+</head>
+<body>
 
-      /* ── Disclaimer banner ──────────────────────────────────────── */
-      .disclaimer-banner {
-        background: var(--aviso-bg);
-        border: 1px solid #e0c97a;
-        border-left: 4px solid #c9a000;
-        border-radius: var(--radius);
-        padding: 0.75rem 1rem;
-        font-size: 0.8rem;
-        color: var(--aviso);
-        line-height: 1.55;
-        margin-bottom: 1.5rem;
-        display: flex;
-        gap: 0.5rem;
-        align-items: flex-start;
-      }
-      .disclaimer-banner svg {
-        flex-shrink: 0;
-        margin-top: 2px;
-      }
+<a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
+<div id="live-region" aria-live="polite" aria-atomic="true"></div>
 
-      /* ── Como usar ──────────────────────────────────────────────── */
-      .step-list {
-        list-style: none;
-        counter-reset: steps;
-        margin-top: 1rem;
-      }
-      .step-list li {
-        counter-increment: steps;
-        display: flex;
-        gap: 1rem;
-        padding: 0.85rem 0;
-        border-bottom: 1px solid var(--borda);
-        font-size: 0.875rem;
-        align-items: flex-start;
-      }
-      .step-list li:last-child {
-        border-bottom: none;
-      }
-      .step-list li::before {
-        content: counter(steps);
-        min-width: 28px;
-        height: 28px;
-        background: var(--verde-escuro);
-        color: #fff;
-        font-size: 0.75rem;
-        font-weight: 700;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        font-family: var(--font-mono);
-      }
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="header-badge" aria-hidden="true">LABS v3</div>
+    <div class="header-titles">
+      <h1>IAMSPE Labs — Padronizador de Exames Laboratoriais</h1>
+      <p>Extração e organização automática de laudos. Uso exclusivamente operacional de apoio.</p>
+    </div>
+  </div>
+</header>
 
-      .example-block {
-        background: #f0f7f2;
-        border: 1px solid var(--borda);
-        border-radius: var(--radius);
-        padding: 1rem;
-        font-family: var(--font-mono);
-        font-size: 0.78rem;
-        white-space: pre-wrap;
-        word-break: break-word;
-        color: var(--texto);
-        margin-top: 0.75rem;
-        line-height: 1.7;
-      }
+<!-- NAV -->
+<nav aria-label="Navegação principal">
+  <div class="nav-inner" role="tablist" aria-label="Seções da ferramenta">
+    <button role="tab" id="tab-processar" aria-controls="panel-processar" aria-selected="true">Processar Exames</button>
+    <button role="tab" id="tab-como-usar" aria-controls="panel-como-usar" aria-selected="false" tabindex="-1">Como Usar</button>
+    <button role="tab" id="tab-avisos" aria-controls="panel-avisos" aria-selected="false" tabindex="-1">Avisos / Responsabilidade</button>
+  </div>
+</nav>
 
-      /* ── Avisos ─────────────────────────────────────────────────── */
-      .aviso-card h2 {
-        font-family: var(--font-serif);
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--verde-escuro);
-        margin-bottom: 0.75rem;
-        margin-top: 1.25rem;
-      }
-      .aviso-card h2:first-child {
-        margin-top: 0;
-      }
-      .aviso-card p {
-        font-size: 0.875rem;
-        line-height: 1.7;
-        color: var(--texto-suave);
-        margin-bottom: 0.6rem;
-      }
-      .aviso-card p strong {
-        color: var(--texto);
-      }
+<!-- MAIN -->
+<main id="main-content">
 
-      /* ── Footer ─────────────────────────────────────────────────── */
-      footer {
-        border-top: 1px solid var(--borda);
-        background: #eef4f0;
-        padding: 0.9rem 1.5rem;
-        text-align: center;
-      }
-      .footer-inner {
-        max-width: 900px;
-        margin: 0 auto;
-        font-size: 0.78rem;
-        color: var(--texto-suave);
-        line-height: 1.5;
-      }
-      .footer-inner strong {
-        color: var(--texto);
-      }
+  <!-- ABA 1: PROCESSAR -->
+  <div role="tabpanel" id="panel-processar" aria-labelledby="tab-processar" class="active" tabindex="0">
 
-      /* ── Live region ────────────────────────────────────────────── */
-      #live-region {
-        position: absolute;
-        left: -9999px;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-      }
+    <div class="disclaimer-banner" role="note" aria-label="Aviso importante">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z" fill="#c9a000"/>
+        <path d="M7.25 6.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V6.5ZM8 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" fill="#c9a000"/>
+      </svg>
+      <span>
+        O processamento ocorre <strong>localmente no seu navegador</strong>. Nenhum dado é enviado para servidores.
+        <strong>Revise sempre a saída com o laudo original</strong> antes de utilizar em prontuário ou conduta clínica.
+      </span>
+    </div>
 
-      /* ── Responsive ─────────────────────────────────────────────── */
-      @media (max-width: 600px) {
-        main {
-          padding: 1.25rem 1rem;
-        }
-        .card {
-          padding: 1.25rem;
-        }
-        .header-inner {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 0.5rem;
-        }
-        .nav-inner {
-          overflow-x: auto;
-          padding-bottom: 0;
-        }
-        [role="tab"] {
-          padding: 0.65rem 0.85rem;
-          font-size: 0.75rem;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Skip link acessibilidade -->
-    <a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
-
-    <!-- Live region para leitores de tela -->
-    <div id="live-region" aria-live="polite" aria-atomic="true"></div>
-
-    <!-- ── HEADER ─────────────────────────────────────────────────── -->
-    <header>
-      <div class="header-inner">
-        <div class="header-badge" aria-hidden="true">LABS v2</div>
-        <div class="header-titles">
-          <h1>IAMSPE Labs — Padronizador de Exames Laboratoriais</h1>
-          <p>
-            Extração e organização automática de laudos. Uso exclusivamente
-            operacional de apoio.
-          </p>
-        </div>
+    <div class="card">
+      <p class="section-title">Texto bruto do laudo</p>
+      <p class="section-desc">Cole abaixo o texto copiado do laudo (ambulatório ou pronto-socorro). Aceita múltiplos exames e datas.</p>
+      <label for="input-laudo">Laudo copiado do IAMSPE</label>
+      <textarea id="input-laudo" name="laudo" aria-required="true" aria-describedby="input-desc"
+        placeholder="Cole aqui o texto copiado do laudo…" spellcheck="false" autocomplete="off"></textarea>
+      <p id="input-desc" style="font-size:.78rem;color:var(--texto-suave);margin-top:.3rem;">
+        Suporta laudos do ambulatório (SERVIÇO DE LABORATÓRIO) e do pronto-socorro (LABORATÓRIO BIOFAST).
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-processar" type="button">Processar</button>
+        <button class="btn btn-secondary" id="btn-exemplo" type="button">Carregar exemplo</button>
+        <button class="btn btn-danger" id="btn-limpar" type="button">Limpar</button>
       </div>
-    </header>
+    </div>
 
-    <!-- ── NAV TABS ──────────────────────────────────────────────── -->
-    <nav aria-label="Navegação principal">
-      <div class="nav-inner" role="tablist" aria-label="Seções da ferramenta">
-        <button
-          role="tab"
-          id="tab-processar"
-          aria-controls="panel-processar"
-          aria-selected="true"
-        >
-          Processar Exames
-        </button>
-        <button
-          role="tab"
-          id="tab-como-usar"
-          aria-controls="panel-como-usar"
-          aria-selected="false"
-          tabindex="-1"
-        >
-          Como Usar
-        </button>
-        <button
-          role="tab"
-          id="tab-avisos"
-          aria-controls="panel-avisos"
-          aria-selected="false"
-          tabindex="-1"
-        >
-          Avisos / Responsabilidade
-        </button>
+    <div class="status-area" aria-live="polite" aria-atomic="true">
+      <div class="msg msg-error"   id="msg-error"   role="alert"></div>
+      <div class="msg msg-warn"    id="msg-warn"    role="status"></div>
+      <div class="msg msg-success" id="msg-success" role="status"></div>
+      <div class="msg msg-info"    id="msg-info"    role="status"></div>
+    </div>
+
+    <div class="output-section" id="output-section" hidden>
+      <div class="card">
+        <div class="output-label-row">
+          <label for="output-box" style="margin-bottom:0;">Saída padronizada</label>
+          <button class="btn btn-copy" id="btn-copiar" type="button" disabled aria-disabled="true">Copiar saída</button>
+        </div>
+        <div id="output-box" class="output-box" role="region" aria-label="Saída padronizada dos exames" aria-live="polite"></div>
+        <p style="font-size:.76rem;color:var(--texto-suave);margin-top:.5rem;">Selecione o texto acima ou use o botão para copiar.</p>
       </div>
-    </nav>
-
-    <!-- ── MAIN ──────────────────────────────────────────────────── -->
-    <main id="main-content">
-      <!-- ═══ ABA 1: PROCESSAR ════════════════════════════════════ -->
-      <div
-        role="tabpanel"
-        id="panel-processar"
-        aria-labelledby="tab-processar"
-        class="active"
-        tabindex="0"
-      >
-        <div
-          class="disclaimer-banner"
-          role="note"
-          aria-label="Aviso importante"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
-              fill="#c9a000"
-            />
-            <path
-              d="M7.25 6.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V6.5ZM8 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"
-              fill="#c9a000"
-            />
-          </svg>
-          <span>
-            O processamento ocorre <strong>localmente no seu navegador</strong>.
-            Nenhum dado é enviado para servidores.
-            <strong>Revise sempre a saída com o laudo original</strong> antes de
-            utilizar em prontuário ou conduta clínica.
-          </span>
-        </div>
-
-        <div class="card">
-          <p class="section-title">Texto bruto do laudo</p>
-          <p class="section-desc">
-            Copie o conteúdo do laudo laboratorial do IAMSPE e cole abaixo. Pode
-            incluir múltiplos exames e datas.
-          </p>
-
-          <label for="input-laudo">
-            Laudo copiado do IAMSPE<span class="req" aria-hidden="true">*</span>
-          </label>
-          <textarea
-            id="input-laudo"
-            name="laudo"
-            aria-required="true"
-            aria-describedby="input-desc"
-            placeholder="Cole aqui o texto copiado do laudo do IAMSPE…&#10;&#10;Exemplo:&#10;HEMOGRAMA,SANGUE&#10;Coletado em: 03/05/2023 07:30 Liberado em: 03/05/2023 10:45&#10;…"
-            spellcheck="false"
-            autocomplete="off"
-          ></textarea>
-          <p
-            id="input-desc"
-            style="
-              font-size: 0.78rem;
-              color: var(--texto-suave);
-              margin-top: 0.3rem;
-            "
-          >
-            Aceita múltiplos exames e blocos. O parser identifica e agrupa
-            automaticamente por data de coleta.
-          </p>
-
-          <div class="btn-row">
-            <button class="btn btn-primary" id="btn-processar" type="button">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 15 15"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M7.5 1a6.5 6.5 0 1 0 0 13A6.5 6.5 0 0 0 7.5 1ZM0 7.5a7.5 7.5 0 1 1 15 0 7.5 7.5 0 0 1-15 0Z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M5.5 5.25a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0v-4.5ZM11 7.5a.75.75 0 0 0-.75-.75H6.5a.75.75 0 0 0 0 1.5h3.75A.75.75 0 0 0 11 7.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-              Processar
-            </button>
-            <button class="btn btn-secondary" id="btn-exemplo" type="button">
-              Carregar exemplo
-            </button>
-            <button class="btn btn-danger" id="btn-limpar" type="button">
-              Limpar
-            </button>
-          </div>
-        </div>
-
-        <!-- STATUS -->
-        <div class="status-area" aria-live="polite" aria-atomic="true">
-          <div class="msg msg-error" id="msg-error" role="alert"></div>
-          <div class="msg msg-warn" id="msg-warn" role="status"></div>
-          <div class="msg msg-success" id="msg-success" role="status"></div>
-          <div class="msg msg-info" id="msg-info" role="status"></div>
-        </div>
-
-        <!-- OUTPUT -->
-        <div class="output-section" id="output-section" hidden>
-          <div class="card">
-            <div class="output-label-row">
-              <label for="output-box" style="margin-bottom: 0"
-                >Saída padronizada</label
-              >
-              <button
-                class="btn btn-copy"
-                id="btn-copiar"
-                type="button"
-                disabled
-                aria-disabled="true"
-              >
-                Copiar saída
-              </button>
-            </div>
-            <div
-              id="output-box"
-              class="output-box"
-              role="region"
-              aria-label="Saída padronizada dos exames"
-              aria-live="polite"
-            ></div>
-            <p
-              style="
-                font-size: 0.76rem;
-                color: var(--texto-suave);
-                margin-top: 0.5rem;
-              "
-            >
-              Selecione o texto acima para copiar manualmente, ou use o botão
-              "Copiar saída".
-            </p>
-          </div>
-        </div>
-      </div>
-      <!-- /panel-processar -->
-
-      <!-- ═══ ABA 2: COMO USAR ════════════════════════════════════ -->
-      <div
-        role="tabpanel"
-        id="panel-como-usar"
-        aria-labelledby="tab-como-usar"
-        tabindex="0"
-      >
-        <div class="card">
-          <p class="section-title">Passo a passo</p>
-          <p class="section-desc">
-            Como utilizar a ferramenta de padronização de exames do IAMSPE.
-          </p>
-
-          <ol class="step-list" aria-label="Passo a passo de uso">
-            <li>
-              Acesse o sistema de laudos do IAMSPE e selecione os resultados
-              laboratoriais do paciente.
-            </li>
-            <li>
-              Copie o texto completo do laudo — pode incluir múltiplos exames e
-              datas diferentes no mesmo bloco.
-            </li>
-            <li>
-              Volte para a aba <strong>Processar Exames</strong> e cole o texto
-              no campo principal.
-            </li>
-            <li>
-              Clique em <strong>Processar</strong>. A ferramenta irá
-              identificar, agrupar e formatar os exames automaticamente.
-            </li>
-            <li>
-              <strong>Revise a saída com atenção</strong>, comparando com o
-              laudo original. Erros de extração podem ocorrer.
-            </li>
-            <li>
-              Clique em <strong>Copiar saída</strong> e utilize o texto
-              resultante conforme necessário.
-            </li>
-          </ol>
-        </div>
-
-        <div class="card">
-          <p class="section-title">Formato de entrada esperado</p>
-          <p class="section-desc">
-            O parser é projetado para o formato padrão dos laudos do IAMSPE.
-            Exemplo típico:
-          </p>
-          <div
-            class="example-block"
-            role="region"
-            aria-label="Exemplo de entrada"
-          >
-            HEMOGRAMA,SANGUE Coletado em: 03/05/2023 07:30 Liberado em:
-            03/05/2023 10:45 Resultado Valores de referência Método ERITROGRAMA
-            Hemoglobina 14,1 g/dL 13,0-17,5 Fotométrico Hematócrito 43,5 %
-            40,0-52,0 VCM 94,9 fL 80,0-100,0 HCM 30,9 pg 26,0-34,0 CHCM 32,6
-            g/dL 31,0-37,0 RDW-CV 13,7 % 11,5-14,5 LEUCOGRAMA Leucócitos 7,20
-            mil/mm³ 4,00-11,00 Neutrófilos 69,10 % 4,97 mil/mm³ Eosinófilos 0,92
-            % 0,07 mil/mm³ Basófilos 0,51 % 0,04 mil/mm³ Linfócitos 25,68 % 1,85
-            mil/mm³ Monócitos 3,74 % 0,27 mil/mm³ PLAQUETAS Plaquetas 269
-            mil/mm³ 150-400 Resultados anteriores: [dados anteriores — ignorados
-            pelo parser] GLICOSE, SANGUE Coletado em: 03/05/2023 07:30 Liberado
-            em: 03/05/2023 09:15 Resultado Valores de referência Método 85 mg/dL
-            70-99
-          </div>
-        </div>
-
-        <div class="card">
-          <p class="section-title">Formato de saída gerado</p>
-          <p class="section-desc">
-            A saída é um bloco de texto compacto, pronto para colar em evolução
-            clínica:
-          </p>
-          <div
-            class="example-block"
-            role="region"
-            aria-label="Exemplo de saída"
-          >
-            #LABS: 03/05/2023: Hb 14,1 / Ht 43,5 / VCM 94,9 / HCM 30,9 / CHCM
-            32,6 / RDW 13,7 / LEUCO 7,20 (neut. 4,97 / eos. 0,07 / baso 0,04 /
-            linf. 1,85 / mono 0,27) / PLQ 269 / GLIC 85
-          </div>
-        </div>
-
-        <div class="card">
-          <p class="section-title">Notas importantes</p>
-          <ul
-            style="
-              font-size: 0.875rem;
-              color: var(--texto-suave);
-              line-height: 1.7;
-              padding-left: 1.2rem;
-            "
-          >
-            <li>Exames com data ausente ou não reconhecida serão ignorados.</li>
-            <li>
-              Se um exame não estiver presente em determinada data, ele é
-              simplesmente omitido da linha.
-            </li>
-            <li>
-              A ordem dos exames na saída é sempre fixa, independente da ordem
-              no laudo original.
-            </li>
-            <li>
-              Valores são apresentados sem unidade e sem intervalo de
-              referência.
-            </li>
-            <li>
-              Para o leucograma, são usados valores absolutos quando
-              disponíveis. Se ausentes, calcula-se a partir do percentual e do
-              leucócito total.
-            </li>
-            <li>
-              <strong
-                >Não compartilhe laudos com dados identificáveis em ambientes
-                não seguros.</strong
-              >
-            </li>
-          </ul>
-        </div>
-      </div>
-      <!-- /panel-como-usar -->
-
-      <!-- ═══ ABA 3: AVISOS ════════════════════════════════════════ -->
-      <div
-        role="tabpanel"
-        id="panel-avisos"
-        aria-labelledby="tab-avisos"
-        tabindex="0"
-      >
-        <div class="card aviso-card">
-          <h2>Finalidade da ferramenta</h2>
-          <p>
-            Esta ferramenta tem
-            <strong>finalidade exclusivamente operacional de apoio</strong> à
-            organização de dados laboratoriais. Ela foi desenvolvida para
-            facilitar a padronização textual de resultados já disponíveis no
-            prontuário, sem qualquer função diagnóstica ou terapêutica.
-          </p>
-
-          <h2>Ausência de interpretação clínica</h2>
-          <p>
-            A ferramenta
-            <strong
-              >não interpreta, não analisa e não emite nenhum julgamento
-              clínico</strong
-            >
-            sobre os valores apresentados. Não há alertas automáticos de
-            normalidade ou anormalidade. A responsabilidade pela interpretação
-            dos resultados é exclusivamente do profissional de saúde habilitado.
-          </p>
-
-          <h2>Possibilidade de erros</h2>
-          <p>
-            Erros de extração, padronização, cálculo, agrupamento ou omissão
-            <strong>podem ocorrer</strong>, especialmente em laudos com
-            formatação atípica, caracteres especiais, colagens incompletas ou
-            variações no padrão do sistema de origem. O resultado gerado não
-            substitui o laudo original.
-          </p>
-
-          <h2>Obrigatoriedade de conferência</h2>
-          <p>
-            <strong
-              >Sempre confira o resultado final com o documento original</strong
-            >
-            antes de utilizá-lo em prontuário, conduta assistencial, discussão
-            de caso, comunicação clínica ou qualquer outra finalidade. O uso sem
-            revisão adequada é de responsabilidade exclusiva do usuário.
-          </p>
-
-          <h2>Privacidade e segurança de dados</h2>
-          <p>
-            O processamento ocorre
-            <strong>integralmente no navegador do usuário</strong>. Nenhum dado
-            é transmitido para servidores externos, coletado, armazenado ou
-            registrado por esta aplicação. Ainda assim, recomenda-se atenção ao
-            uso em dispositivos compartilhados e ao compartilhamento de laudos
-            com dados identificáveis.
-          </p>
-
-          <h2>Limitação de responsabilidade</h2>
-          <p>
-            O desenvolvedor e os mantenedores desta ferramenta
-            <strong>não garantem ausência de erros</strong> e não assumem
-            responsabilidade por danos decorrentes do uso sem conferência
-            adequada, uso em contexto clínico sem revisão humana, ou
-            interpretação incorreta dos dados gerados.
-          </p>
-          <p>
-            Esta ferramenta é disponibilizada como apoio técnico operacional. O
-            uso pressupõe revisão humana final por profissional competente.
-          </p>
-
-          <h2>Versão atual</h2>
-          <p>
-            <strong>v2.0</strong> — Contempla hemograma completo, bioquímica
-            básica, perfil lipídico, função hepática, metabolismo do ferro,
-            tireoide e vitamina D. Exames fora deste escopo são ignorados na
-            versão atual.
-          </p>
-        </div>
-      </div>
-      <!-- /panel-avisos -->
-    </main>
-
-    <!-- ── FOOTER ─────────────────────────────────────────────────── -->
-    <footer>
-      <div class="footer-inner">
-        <strong
-          >Revise sempre a saída com o laudo original antes de utilizar.</strong
-        ><br />
-        IAMSPE Labs v2 · Ferramenta de apoio operacional · Processamento local ·
-        Sem backend
-      </div>
-    </footer>
-
-    <!-- ════════════════════════════════════════════════════════════ -->
-    <!-- JAVASCRIPT                                                   -->
-    <!-- ════════════════════════════════════════════════════════════ -->
-    <script>
-      "use strict";
-
-      /* ═══════════════════════════════════════════════════════════════
-   IAMSPE LABS v2 — Parser calibrado para o formato real dos laudos
-   
-   Novidades v2:
-   - Eletrólitos: Na, K, Mg
-   - Coagulograma: TP (RNI), TTPA (razão)
-   - Hepático expandido: FAL, GGT, BilT/BilD/BilI, Amilase, Lipase
-   - Proteínas: Alb, ProtT, Glob
-   - HbA1c, CPK, PCR, VHS, CaI, PTH, Folato
-   - Sorologias qualitativas: HBsAg, HCV, HIV, Sífilis, FAN, Anti-*
-   - Microbiológicos: Cultura aeróbia/fungo/micobactéria, BAAR, Bacterioscopia
-   - Correção: cabeçalho institucional quebrado em múltiplas linhas
-   - Correção: "Coletado:" sem "em" (microbiológicos)
-   - Correção: CRBIO, CRM, CRA como conselhos profissionais
-   - Correção: nomes de exame multilinhas (culturas)
-   - Correção: resultado anterior na mesma linha (proteínas totais)
-═══════════════════════════════════════════════════════════════ */
-
-      /* ─── ALIASES internos do hemograma ──────────────────────────── */
-      const ALIASES_HEMO = {
-        hemoglobina: "Hb",
-        hematocrito: "Ht",
-        vcm: "VCM",
-        hcm: "HCM",
-        chcm: "CHCM",
-        "rdw-cv": "RDW",
-        rdw: "RDW",
-        leucocitos: "LEUCO",
-        leucocito: "LEUCO",
-        neutrofilos: "neut",
-        neutrofilo: "neut",
-        eosinofilos: "eos",
-        eosinofilo: "eos",
-        basofilos: "baso",
-        basofilo: "baso",
-        linfocitos: "linf",
-        linfocito: "linf",
-        monocitos: "mono",
-        monocito: "mono",
-        plaquetas: "PLQ",
-        plaqueta: "PLQ",
-      };
-
-      /* ─── ALIASES de exames simples (header do bloco → chave) ────── */
-      const ALIASES_BLOCK = {
-        // Hemograma
-        hemograma: "_HEMOGRAMA",
-        // Glicemia
-        glicose: "GLIC",
-        glicemia: "GLIC",
-        "hemoglobina glicada": "HbA1c",
-        // Função renal
-        ureia: "U",
-        creatinina: "CR",
-        "calcio ionizado": "CaI",
-        // Eletrólitos
-        sodio: "Na",
-        potassio: "K",
-        magnesio: "Mg",
-        fosforo: "P",
-        // Básico
-        calcio: "Ca",
-        "acido urico": "AcUrico",
-        "proteina c reativa": "PCR",
-        pcr: "PCR",
-        hemossedimentacao: "VHS",
-        vhs: "VHS",
-        albumina: "Alb",
-        paratormonio: "PTH",
-        pth: "PTH",
-        "acido folico": "Folato",
-        folato: "Folato",
-        // Hepático
-        "aspartato amino transferase": "TGO",
-        "aspartato aminotransferase": "TGO",
-        "alanino amino transferase": "TGP",
-        "alanino aminotransferase": "TGP",
-        "fosfatase alcalina": "FAL",
-        "gama gt": "GGT",
-        "gama-gt": "GGT",
-        amilase: "Amilase",
-        lipase: "Lipase",
-        // Bilirrubinas — bloco composto
-        "bilirrubinas total e fracoes": "_BILIRRUBINAS",
-        "bilirrubinas total e frações": "_BILIRRUBINAS",
-        // Proteínas — bloco composto
-        "proteinas totais e fracoes": "_PROTEINAS",
-        "proteínas totais e frações": "_PROTEINAS",
-        "eletroforese de proteinas": "_ELETROFORESE",
-        // Lipídios
-        "colesterol total": "CT",
-        "colesterol hdl": "HDL",
-        "hdl colesterol": "HDL",
-        "colesterol ldl": "LDL",
-        "ldl colesterol": "LDL",
-        "colesterol vldl": "VLDL",
-        "colesterol nao hdl": "NHDL",
-        triglicerides: "TG",
-        triglicerideos: "TG",
-        // Ferro
-        ferro: "Fe",
-        "capacidade total de ligacao de ferro": "_FERRO_PANEL",
-        "capacidade total ligacao de ferro": "_FERRO_PANEL",
-        // Coagulograma — blocos compostos
-        "tempo de protrombina": "_TP",
-        "tempo de tromboplastina parcial ativado": "_TTPA",
-        // Tireoide
-        triiodotironina: "T3",
-        "t3 total": "T3",
-        "tiroxina livre": "T4L",
-        "t4 livre": "T4L",
-        "hormonio tireotrof": "TSH",
-        "anticorpo anti tireoglobulina": "AntiTg",
-        // Vitaminas / minerais
-        "25 oh vitamina d": "VitD",
-        "25-oh vitamina d": "VitD",
-        "vitamina d": "VitD",
-        "vitamina b12": "B12",
-        cobalamina: "B12",
-        ferritina: "Ferritina",
-        cpk: "CPK",
-        ck: "CPK",
-        // Sorologias qualitativas
-        hbsag: "_QUAL_HBsAg",
-        "anti hbc anticorpos totais": "_QUAL_AntiHBc",
-        "anti hbc": "_QUAL_AntiHBc",
-        "hcv pesquisa de anticorpos": "_QUAL_HCV",
-        "hcv anticorpos": "_QUAL_HCV",
-        "hiv anticorpos e antigeno p24": "_QUAL_HIV",
-        hiv: "_QUAL_HIV",
-        "sifilis sorologia": "_QUAL_Sifilis",
-        sifilis: "_QUAL_Sifilis",
-        "fan crithidia": "_QUAL_FANcrith",
-        "fan hep2": "_QUAL_FANhep2",
-        "anti rnp": "_QUAL_AntiRNP",
-        "anti sm": "_QUAL_AntiSm",
-        "anti ssa-ro": "_QUAL_AntiSSA",
-        "anti ssa ro": "_QUAL_AntiSSA",
-        "anti ssb-la": "_QUAL_AntiSSB",
-        "anti ssb la": "_QUAL_AntiSSB",
-        "anti jo1": "_QUAL_AntiJO1",
-        "anti scl70": "_QUAL_AntiSCL70",
-        "anti scl 70": "_QUAL_AntiSCL70",
-        "imunoglobulina g": "IgG",
-        "imunoglobulina a": "IgA",
-        "imunoglobulina m": "IgM",
-        "imunoglobulina e": "IgE",
-        "fator reumatoide": "FR",
-        // Microbiológicos
-        "cultura aerobia": "_MICRO_CultAerobia",
-        "cultura de fungo": "_MICRO_CultFungo",
-        "cultura de micobacteria": "_MICRO_CultMicob",
-        "pesquisa de baar": "_MICRO_BAAR",
-        baar: "_MICRO_BAAR",
-        bacterioscopia: "_MICRO_Bacterio",
-      };
-
-      /* ─── Aliases internos dos painéis compostos ─────────────────── */
-      const ALIASES_PANEL = {
-        // Bilirrubinas
-        "bilirrubina direta": "BilD",
-        "bilirrubinas totais": "BilT",
-        "bilirrubina total": "BilT",
-        "bilirrubina indireta": "BilI",
-        // Proteínas totais
-        "proteinas totais": "ProtT",
-        albumina: "Alb",
-        globulinas: "Glob",
-        // Ferro
-        "capacidade total de ligacao de ferro": "CTLF",
-        "capacidade latente": null, // ignorar
-        "indice de saturacao de transferrina": "SatTransf",
-        "saturacao de transferrina": "SatTransf",
-        // TP
-        "tempo de protrombina": "TP_seg",
-        atividade: "TP_ativ",
-        rni: "RNI",
-        // TTPA
-        ttpa: "TTPA_seg",
-        razao: "TTPA_razao",
-      };
-
-      /* ─── Rótulos curtos para sorologias qualitativas ─────────────── */
-      const QUAL_LABELS = {
-        _QUAL_HBsAg: "HBsAg",
-        _QUAL_AntiHBc: "AntiHBc",
-        _QUAL_HCV: "HCV",
-        _QUAL_HIV: "HIV",
-        _QUAL_Sifilis: "Sífilis",
-        _QUAL_FANcrith: "FANcrith",
-        _QUAL_FANhep2: "FANhep2",
-        _QUAL_AntiRNP: "Anti-RNP",
-        _QUAL_AntiSm: "Anti-SM",
-        _QUAL_AntiSSA: "Anti-SSA",
-        _QUAL_AntiSSB: "Anti-SSB",
-        _QUAL_AntiJO1: "Anti-JO1",
-        _QUAL_AntiSCL70: "Anti-SCL70",
-      };
-
-      /* ─── Rótulos curtos para microbiológicos ────────────────────── */
-      const MICRO_LABELS = {
-        _MICRO_CultAerobia: "CultAerobia",
-        _MICRO_CultFungo: "CultFungo",
-        _MICRO_CultMicob: "CultMicob",
-        _MICRO_BAAR: "BAAR",
-        _MICRO_Bacterio: "Bacterio",
-      };
-
-      /* ─── Normalização qualitativa de resultado ──────────────────── */
-      const QUAL_MAP = [
-        [/n[ãa]o\s*reagente/i, "NR"],
-        [/negati/i, "NEG"],
-        [/positiv/i, "POS"],
-        [/n[ãa]o\s*houve\s+crescimento/i, "NEG"],
-        [/inconclusiv/i, "INCONCL"],
-        [/reagente/i, "R"],
-      ];
-
-      function normalizeQual(str) {
-        for (const [re, label] of QUAL_MAP) {
-          if (re.test(str)) return label;
-        }
-        return str.trim().slice(0, 20);
-      }
-
-      /* ─── Ordem fixa de saída v2 ─────────────────────────────────── */
-      const OUTPUT_ORDER = [
-        // Hemograma
-        "Hb",
-        "Ht",
-        "VCM",
-        "HCM",
-        "CHCM",
-        "RDW",
-        "LEUCO", // inline: neut, eos, baso, linf, mono
-        "PLQ",
-        // Glicemia
-        "GLIC",
-        "HbA1c",
-        // Função renal + eletrólitos
-        "U",
-        "CR",
-        "Na",
-        "K",
-        "Ca",
-        "CaI",
-        "Mg",
-        "P",
-        // Hepático
-        "TGO",
-        "TGP",
-        "FAL",
-        "GGT",
-        "BilT",
-        "BilD",
-        "BilI",
-        "Amilase",
-        "Lipase",
-        // Proteínas
-        "Alb",
-        "ProtT",
-        "Glob",
-        // Coagulograma
-        "TP", // composto: seg + RNI
-        "TTPA", // composto: seg + razão
-        // Lipídios
-        "CT",
-        "HDL",
-        "LDL",
-        "VLDL",
-        "NHDL",
-        "TG",
-        // Outros básicos
-        "AcUrico",
-        "PCR",
-        "VHS",
-        "FR",
-        // Ferro e reservas
-        "Fe",
-        "CTLF",
-        "SatTransf",
-        // Tireoide
-        "T3",
-        "T4L",
-        "TSH",
-        "PTH",
-        "AntiTg",
-        // Vitaminas e reservas
-        "Ferritina",
-        "Folato",
-        "B12",
-        "VitD",
-        // Outros
-        "CPK",
-        "IgG",
-        "IgA",
-        "IgM",
-        "IgE",
-        // Sorologias qualitativas (ordem fixa)
-        "_QUAL_HBsAg",
-        "_QUAL_AntiHBc",
-        "_QUAL_HCV",
-        "_QUAL_HIV",
-        "_QUAL_Sifilis",
-        "_QUAL_FANcrith",
-        "_QUAL_FANhep2",
-        "_QUAL_AntiRNP",
-        "_QUAL_AntiSm",
-        "_QUAL_AntiSSA",
-        "_QUAL_AntiSSB",
-        "_QUAL_AntiJO1",
-        "_QUAL_AntiSCL70",
-        // Microbiológicos (ordem de aparição, tratados separadamente)
-      ];
-
-      const LEUCO_SUBS = ["neut", "eos", "baso", "linf", "mono"];
-      const LEUCO_LABELS = {
-        neut: "neut.",
-        eos: "eos.",
-        baso: "baso",
-        linf: "linf.",
-        mono: "mono",
-      };
-
-      /* ══════════════════════════════════════════════════════════════
-   UTILIDADES
-══════════════════════════════════════════════════════════════ */
-
-      function nk(str) {
-        return str
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-      }
-
-      function resolveBlockAlias(rawHeader) {
-        // Para headers com múltiplas vírgulas como "HCV, PESQUISA DE ANTICORPOS, SANGUE"
-        // precisamos reconstruir o nome completo excluindo o material final
-        const MATERIAIS =
-          /^(sangue|soro|urina|plasma|lcr|escarro|fezes|swab|liquor|liquido|medula|lavado|aspirado|tecido|cateter)/i;
-        const parts = rawHeader.split(",").map((p) => p.trim());
-        // Encontrar onde começa o material biológico (da direita para esquerda)
-        let materialIdx = parts.length;
-        for (let i = parts.length - 1; i >= 0; i--) {
-          if (MATERIAIS.test(parts[i])) materialIdx = i;
-          else break;
-        }
-        const namePart = parts.slice(0, materialIdx).join(" ");
-        const k = nk(namePart.replace(/\s*\(.*?\)\s*/g, " ").trim());
-        if (ALIASES_BLOCK[k]) return ALIASES_BLOCK[k];
-        // prefixo mais longo
-        let best = null,
-          bestLen = 0;
-        for (const [key, val] of Object.entries(ALIASES_BLOCK)) {
-          if (k.startsWith(key) && key.length > bestLen) {
-            best = val;
-            bestLen = key.length;
-          }
-        }
-        return best;
-      }
-
-      function resolvePanelAlias(name) {
-        const k = nk(name);
-        if (ALIASES_PANEL[k] !== undefined) return ALIASES_PANEL[k];
-        let best = undefined,
-          bestLen = 0;
-        for (const [key, val] of Object.entries(ALIASES_PANEL)) {
-          if (k.startsWith(key) && key.length > bestLen) {
-            best = val;
-            bestLen = key.length;
-          }
-        }
-        return best;
-      }
-
-      function resolveHemoAlias(name) {
-        const k = nk(name);
-        if (ALIASES_HEMO[k]) return ALIASES_HEMO[k];
-        let best = null,
-          bestLen = 0;
-        for (const [key, val] of Object.entries(ALIASES_HEMO)) {
-          if (k.startsWith(key) && key.length > bestLen) {
-            best = val;
-            bestLen = key.length;
-          }
-        }
-        return best;
-      }
-
-      function extractFirstNumber(str) {
-        for (const tok of str.trim().split(/\s+/)) {
-          if (/^\d+([,.]\d+)?$/.test(tok)) return tok.replace(".", ",");
-        }
-        const m = str.match(/(?<![,\d\-])(\d+(?:,\d+)?)(?![,\d\-])/);
-        return m ? m[1] : null;
-      }
-
-      function dateToSortKey(dmy) {
-        if (!dmy) return "";
-        const [d, m, a] = dmy.split("/");
-        return `${a}-${m}-${d}`;
-      }
-
-      /* ──────────────────────────────────────────────────────────────
-   ETAPA 0 — Remoção de ruído institucional
-   Lida com variantes:
-   - Linha única: "HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO"
-   - Linha quebrada: "HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL -\nFMO"
-   - Conselhos: CRF, CRM, CRBIO, CRA (linha solta após nome)
-────────────────────────────────────────────────────────────── */
-      const NOISE_PATTERNS = [
-        /^HOSPITAL DO SERVIDOR/i,
-        /^FMO\s*$/i,
-        /^SERVIÇO DE LABORATÓRIO/i,
-        /^CLÍNICAS\s*$/i,
-        /^Diretor Técnico:/i,
-        /^Nº CEVS:/i,
-        /^Av\.\s/i,
-        /^Emissão:/i,
-        /^Pedido:\s*$/i, // "Pedido:" sozinho na linha
-        /^Pedido:\s*\d/i, // "Pedido: 250061912"
-        /^Prontuário:/i,
-        /^Data Nasc\./i,
-        /^Solicitante:/i,
-        /^Setor solicitante:/i,
-        /^Responsável:/i,
-        /^Os resultados dos exames/i,
-        /^A interpretação correta/i,
-        /^análise conjunta/i,
-        /^e deve ser feita/i,
-        /^_{5,}/,
-        /^-{5,}/,
-        // Conselhos soltos
-        /^CRF\s*[-:]?\s*[\d\/]/i,
-        /^CRM\s*[-:]?\s*[\d\/]/i,
-        /^CRBIO\s*[-:]?\s*[\d\/]/i,
-        /^CRA\s*[-:]?\s*/i,
-        // Notas institucionais comuns
-        /^NOVOS VALORES DE REFERÊNCIA/i,
-        /^PARA LAUDOS/i,
-        /^EXAMES REALIZADOS EM CONFORMIDADE/i,
-      ];
-
-      const COUNCIL_PATTERN = /^(CRF|CRM|CRBIO|CRA)\s*[-:]?\s*[\d\/]/i;
-
-      function removeInstitutionalNoise(text) {
-        const lines = text.split("\n");
-        const out = [];
-        let i = 0;
-        while (i < lines.length) {
-          const line = lines[i].trim();
-          // Par: nome em caps + conselho na próxima linha
-          if (
-            i + 1 < lines.length &&
-            /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\.]+$/.test(line) &&
-            line.length > 4 &&
-            line.length < 60 &&
-            COUNCIL_PATTERN.test(lines[i + 1].trim())
-          ) {
-            i += 2;
-            continue;
-          }
-          if (!NOISE_PATTERNS.some((p) => p.test(line))) {
-            out.push(lines[i]);
-          }
-          i++;
-        }
-        return out.join("\n");
-      }
-
-      /* ──────────────────────────────────────────────────────────────
-   ETAPA 1 — Sanitização
-────────────────────────────────────────────────────────────── */
-      function sanitizeRawText(raw) {
-        let t = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-        t = t
-          .split("\n")
-          .map((l) => l.replace(/[ \t]+/g, " "))
-          .join("\n");
-        t = t.replace(/\n{3,}/g, "\n\n");
-        return t;
-      }
-
-      /* ──────────────────────────────────────────────────────────────
-   ETAPA 2 — Segmentação em blocos de exame
-   
-   Detecta headers do tipo "NOME DO EXAME, MATERIAL"
-   com tratamento especial para:
-   - Nomes multilinhas (culturas): junta linhas seguidas antes da vírgula
-   - "Coletado:" sem "em" (microbiológicos)
-────────────────────────────────────────────────────────────── */
-      function isExamHeader(line) {
-        const s = line.trim();
-        if (!s.includes(",")) return false;
-        const bc = s.split(",")[0].trim();
-        if (bc.length < 3) return false;
-        // Rejeitar se começa com número (exceto nomenclatura química: "25 OH")
-        if (/^\d/.test(bc) && !/^\d+\s+[A-Za-z]/.test(bc)) return false;
-        // Rejeitar vírgula decimal no nome (fora de parênteses)
-        const bcNP = bc.replace(/\(.*?\)/g, "").trim();
-        if (/\d[,.]\d/.test(bcNP)) return false;
-        // O ÚLTIMO segmento após vírgulas deve ser material biológico
-        // (suporta múltiplas vírgulas: "HCV, PESQUISA DE ANTICORPOS, SANGUE")
-        const allParts = s.split(",").map((p) => p.trim());
-        const lastPart = allParts[allParts.length - 1];
-        if (
-          !/^(sangue|soro|urina|plasma|lcr|escarro|fezes|swab|liquor|liquido|medula|lavado|aspirado|tecido|cateter)/i.test(
-            lastPart,
-          )
-        )
-          return false;
-        // ≥65% das letras do nome em maiúsculas
-        const letters = bc.replace(/[^a-zA-ZÀ-ÿ]/g, "");
-        if (letters.length < 2) return false;
-        const upper = letters.replace(/[^A-ZÀÁÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/g, "").length;
-        return upper / letters.length >= 0.65;
-      }
-
-      function splitIntoExamBlocks(cleanText) {
-        // Primeiro: juntar linhas de nomes quebrados de culturas
-        // ex: "CULTURA DE MICOBACTERIA\nRESPIRATORIO INFERIOR, LAVADO\nBRONCOALVEOLAR"
-        // Estratégia: se linha em caps não tem vírgula mas a próxima tem → juntar
-        const rawLines = cleanText.split("\n");
-        const joinedLines = [];
-        let i = 0;
-        while (i < rawLines.length) {
-          const cur = rawLines[i];
-          const curT = cur.trim();
-          // Detectar linha em caps sem vírgula seguida de continuação
-          const isCapsNoComma =
-            curT.length > 3 &&
-            !curT.includes(",") &&
-            /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\)]+$/.test(curT);
-          const nextHasComma =
-            i + 1 < rawLines.length && rawLines[i + 1].trim().includes(",");
-          const nextIsContinuation =
-            i + 1 < rawLines.length &&
-            /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\)]+$/.test(rawLines[i + 1].trim());
-          if (
-            isCapsNoComma &&
-            (nextHasComma || nextIsContinuation) &&
-            i + 1 < rawLines.length
-          ) {
-            // Tenta juntar até encontrar vírgula
-            let joined = curT;
-            let j = i + 1;
-            while (
-              j < rawLines.length &&
-              !rawLines[j].trim().includes(",") &&
-              /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\)]+$/.test(rawLines[j].trim())
-            ) {
-              joined += " " + rawLines[j].trim();
-              j++;
-            }
-            if (
-              j < rawLines.length &&
-              rawLines[j].trim().includes(",") &&
-              /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ\s\(\),]+$/.test(rawLines[j].trim())
-            ) {
-              joined += " " + rawLines[j].trim();
-              j++;
-            }
-            joinedLines.push(joined);
-            i = j;
-          } else {
-            joinedLines.push(cur);
-            i++;
-          }
-        }
-
-        const lines = joinedLines;
-        const blocks = [];
-        let cur = [];
-        for (const line of lines) {
-          if (isExamHeader(line)) {
-            if (cur.length) blocks.push(cur.join("\n"));
-            cur = [line];
-          } else {
-            cur.push(line);
-          }
-        }
-        if (cur.length) blocks.push(cur.join("\n"));
-        return blocks.filter((b) => b.trim().length > 5);
-      }
-
-      /* ──────────────────────────────────────────────────────────────
-   ETAPA 3 — Extração de data de coleta
-   Suporta "Coletado em:" e "Coletado:" (microbiológicos)
-────────────────────────────────────────────────────────────── */
-      function extractCollectionDate(block) {
-        const m = block.match(
-          /coletad[oa]\s*(?:em\s*)?:\s*(\d{2}\/\d{2}\/\d{4})/i,
-        );
-        return m ? m[1] : null;
-      }
-
-      /* ──────────────────────────────────────────────────────────────
-   ETAPA 4 — Extração do material de coleta
-   Para uso nos microbiológicos: "(LBA)", "(escarro)", etc.
-────────────────────────────────────────────────────────────── */
-      function extractMaterial(blockHeader) {
-        // "CULTURA AEROBIA RESPIRATORIO INFERIOR, LAVADO BRONCOALVEOLAR"
-        // → pega o que vem depois da vírgula
-        const afterComma = blockHeader.split(",").slice(1).join(",").trim();
-        if (!afterComma) return "";
-        // Abreviações conhecidas
-        const matMap = [
-          [/lavado\s+broncoalveolar/i, "LBA"],
-          [/lavado/i, "Lavado"],
-          [/escarro/i, "Escarro"],
-          [/sangue/i, ""], // sangue é implícito, não mostrar
-          [/urina/i, "Urina"],
-          [/swab/i, "Swab"],
-          [/aspirado/i, "Aspirado"],
-          [/lcr|liquor/i, "LCR"],
-        ];
-        for (const [re, label] of matMap) {
-          if (re.test(afterComma)) return label;
-        }
-        // Fallback: primeiras 12 chars
-        return afterComma.slice(0, 12).trim();
-      }
-
-      /* ──────────────────────────────────────────────────────────────
-   PARSERS ESPECÍFICOS
-────────────────────────────────────────────────────────────── */
-
-      /* ── Hemograma ───────────────────────────────────────────────── */
-      function parseHemogramaBlock(block) {
-        const result = {};
-        const lines = block.split("\n");
-        let inResultados = false;
-        for (const rawLine of lines) {
-          const line = rawLine.trim();
-          if (!line) continue;
-          if (/resultados\s+anteriores/i.test(line)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          if (
-            /^(eritrograma|leucograma|plaquetas\s+valores|plaquetas\s*$|resultados?\s+valores|metodologia|automatizada|hemograma|coletado|liberado)/i.test(
-              line,
-            )
-          )
-            continue;
-          // Plaquetas: "Resultados: 213 mil/mm³"
-          if (/^resultados?\s*:/i.test(line)) {
-            const num = extractFirstNumber(
-              line.replace(/^resultados?\s*:/i, "").trim(),
-            );
-            if (num && !result["PLQ"]) result["PLQ"] = num;
-            continue;
-          }
-          const tokens = line.split(/\s+/);
-          let ne = tokens.length;
-          for (let i = 0; i < tokens.length; i++) {
-            if (/^\d+([,.]\d+)?$/.test(tokens[i])) {
-              ne = i;
-              break;
-            }
-          }
-          if (ne === 0 || ne >= tokens.length) continue;
-          const key = resolveHemoAlias(tokens.slice(0, ne).join(" "));
-          if (!key) continue;
-          const nums = tokens
-            .slice(ne)
-            .filter((t) => /^\d+([,.]\d+)?$/.test(t))
-            .map((t) => t.replace(".", ","));
-          if (!nums.length) continue;
-          if (key === "PLQ") {
-            if (!result["PLQ"]) result["PLQ"] = nums[0];
-            continue;
-          }
-          if (key === "LEUCO") {
-            if (!result["LEUCO"]) result["LEUCO"] = nums[0];
-            continue;
-          }
-          if (LEUCO_SUBS.includes(key)) {
-            if (nums.length >= 2) result[key] = nums[1];
-            else if (!result[key + "_pct"]) result[key + "_pct"] = nums[0];
-            continue;
-          }
-          if (!result[key]) result[key] = nums[0];
-        }
-        // Fallback percentual → absoluto
-        if (result["LEUCO"]) {
-          const lf = parseFloat(result["LEUCO"].replace(",", "."));
-          for (const s of LEUCO_SUBS) {
-            if (!result[s] && result[s + "_pct"]) {
-              result[s] = (
-                (lf * parseFloat(result[s + "_pct"].replace(",", "."))) /
-                100
-              )
-                .toFixed(2)
-                .replace(".", ",");
-            }
-          }
-        }
-        for (const s of LEUCO_SUBS) delete result[s + "_pct"];
-        return result;
-      }
-
-      /* ── Bilirrubinas ────────────────────────────────────────────── */
-      function parseBilirrubinaBlock(block) {
-        const result = {};
-        const lines = block.split("\n");
-        let inResultados = false;
-        for (const line of lines) {
-          const l = line.trim();
-          if (!l) continue;
-          if (/resultados\s+anteriores/i.test(l)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l))
-            continue;
-          const tokens = l.split(/\s+/);
-          let ne = tokens.length;
-          for (let i = 0; i < tokens.length; i++) {
-            if (/^\d+([,.]\d+)?$/.test(tokens[i])) {
-              ne = i;
-              break;
-            }
-          }
-          if (ne === 0 || ne >= tokens.length) continue;
-          const key = resolvePanelAlias(tokens.slice(0, ne).join(" "));
-          if (!key) continue;
-          const num = extractFirstNumber(tokens.slice(ne).join(" "));
-          if (num && !result[key]) result[key] = num;
-        }
-        return result;
-      }
-
-      /* ── Proteínas totais e frações ──────────────────────────────── */
-      function parseProteinasBlock(block) {
-        const result = {};
-        const lines = block.split("\n");
-        let inResultados = false;
-        for (const line of lines) {
-          const l = line.trim();
-          if (!l) continue;
-          if (/resultados\s+anteriores/i.test(l)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l))
-            continue;
-          const tokens = l.split(/\s+/);
-          let ne = tokens.length;
-          for (let i = 0; i < tokens.length; i++) {
-            if (/^\d+([,.]\d+)?$/.test(tokens[i])) {
-              ne = i;
-              break;
-            }
-          }
-          if (ne === 0 || ne >= tokens.length) continue;
-          const namePart = tokens.slice(0, ne).join(" ");
-          const key = resolvePanelAlias(namePart);
-          if (!key) continue;
-          const num = extractFirstNumber(tokens.slice(ne).join(" "));
-          if (num && !result[key]) result[key] = num;
-        }
-        return result;
-      }
-
-      /* ── Painel de ferro ─────────────────────────────────────────── */
-      function parseFerroPanelBlock(block) {
-        const result = {};
-        const lines = block.split("\n");
-        let inResultados = false;
-        for (const line of lines) {
-          const l = line.trim();
-          if (!l) continue;
-          if (/resultados\s+anteriores/i.test(l)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          if (/capacidade\s+latente/i.test(l)) continue;
-          if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l))
-            continue;
-          const tokens = l.split(/\s+/);
-          let ne = tokens.length;
-          for (let i = 0; i < tokens.length; i++) {
-            if (/^\d+([,.]\d+)?$/.test(tokens[i])) {
-              ne = i;
-              break;
-            }
-          }
-          if (ne === 0 || ne >= tokens.length) continue;
-          const key = resolvePanelAlias(tokens.slice(0, ne).join(" "));
-          if (!key) continue;
-          const num = extractFirstNumber(tokens.slice(ne).join(" "));
-          if (num && !result[key]) result[key] = num;
-        }
-        return result;
-      }
-
-      /* ── Coagulograma (TP e TTPA) ────────────────────────────────── */
-      function parseCoagBlock(block, tipo) {
-        // tipo: "_TP" ou "_TTPA"
-        const result = {};
-        const lines = block.split("\n");
-        let inResultados = false;
-        for (const line of lines) {
-          const l = line.trim();
-          if (!l) continue;
-          if (/resultados\s+anteriores/i.test(l)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l))
-            continue;
-          const tokens = l.split(/\s+/);
-          let ne = tokens.length;
-          for (let i = 0; i < tokens.length; i++) {
-            if (/^\d+([,.]\d+)?$/.test(tokens[i])) {
-              ne = i;
-              break;
-            }
-          }
-          if (ne === 0 || ne >= tokens.length) continue;
-          const namePart = tokens.slice(0, ne).join(" ");
-          const key = resolvePanelAlias(namePart);
-          if (!key) continue;
-          const num = extractFirstNumber(tokens.slice(ne).join(" "));
-          if (num && !result[key]) result[key] = num;
-        }
-        return result;
-      }
-
-      /* ── Qualitativo (sorologias) ────────────────────────────────── */
-      function parseQualBlock(block) {
-        // Varrer todas as linhas buscando resultado qualitativo,
-        // parando em "Resultados anteriores:"
-        const lines = block.split("\n");
-        let inResultados = false;
-        for (let i = 1; i < lines.length; i++) {
-          const l = lines[i].trim();
-          if (!l) continue;
-          if (/resultados\s+anteriores/i.test(l)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          // Ignorar linhas de metadados/cabeçalho
-          if (
-            /^(coletado|liberado|resultado\s+valor|resultado\s*$|valores\s+de|metodo|metodologia|indice|cmia|quimio|imuno|elisa|eletro|turbidim)/i.test(
-              l,
-            )
-          )
-            continue;
-          // Ignorar linhas de referência que começam com operador + número
-          if (/^[<>]\s*[\d,]/.test(l)) continue;
-          // Detectar padrão qualitativo
-          if (
-            /n[ãa]o\s*reagente|n[ãa]o\s*houve|negati|positiv|inconclusiv/i.test(
-              l,
-            )
-          ) {
-            return normalizeQual(l);
-          }
-          if (/^reagente$/i.test(l)) return "R";
-        }
-        return null;
-      }
-
-      /* ── Microbiológico ──────────────────────────────────────────── */
-      function parseMicroBlock(block) {
-        const lines = block.split("\n");
-        let resultado = null;
-        let microorg = null;
-        for (const line of lines) {
-          const l = line.trim();
-          if (!l) continue;
-          // "Resultado: Negativo" ou "Resultado:Positivo"
-          const mRes = l.match(/^resultado\s*:\s*(.+)/i);
-          if (mRes) {
-            resultado = mRes[1].trim();
-            continue;
-          }
-          // "Microorganismo: Fungo filamentoso hialino..."
-          const mMicro = l.match(/^microorganismo\s*:\s*(.+)/i);
-          if (mMicro) {
-            microorg = mMicro[1].trim();
-            continue;
-          }
-          // Para BAAR/Bacterioscopia: resultado vem na linha de valor
-          if (/^(negativ|positiv|n[ãa]o\s*houve)/i.test(l) && !resultado) {
-            resultado = l;
-          }
-        }
-        return { resultado, microorg };
-      }
-
-      /* ── Exame simples genérico ──────────────────────────────────── */
-      function parseSimpleExamBlock(block, blockKey) {
-        if (!blockKey) return {};
-        const result = {};
-        const lines = block.split("\n");
-        let inResultados = false;
-        let gotVal = false;
-        for (let i = 1; i < lines.length; i++) {
-          const raw = lines[i];
-          const l = raw.trim();
-          if (!l) continue;
-          if (/resultados\s+anteriores/i.test(l)) {
-            inResultados = true;
-          }
-          if (inResultados) continue;
-          if (
-            /^(coletado|liberado|resultado\s+valores|resultado\s*$|valores\s+de\s+refer|metodo|metodologia)/i.test(
-              l,
-            )
-          )
-            continue;
-          // Linha que começa com número (com ou sem espaço líder)
-          if (/^\s*\d/.test(raw) && !gotVal) {
-            const num = extractFirstNumber(l);
-            if (num) {
-              result[blockKey] = num;
-              gotVal = true;
-            }
-            continue;
-          }
-          // Linha que começa com texto qualitativo (< 15.0, Não reagente, etc)
-          if (!gotVal && /^[<>]?\s*\d/.test(l)) {
-            const num = extractFirstNumber(l);
-            if (num) {
-              result[blockKey] = num;
-              gotVal = true;
-            }
-          }
-        }
-        return result;
-      }
-
-      /* ══════════════════════════════════════════════════════════════
-   PIPELINE PRINCIPAL
-══════════════════════════════════════════════════════════════ */
-
-      function processLabText(raw) {
-        const sanitized = sanitizeRawText(raw);
-        const clean = removeInstitutionalNoise(sanitized);
-        const blocks = splitIntoExamBlocks(clean);
-
-        // Estrutura acumulada por data
-        // byDate[dd/mm/aaaa] = { campos numéricos, _quals: {}, _micros: [] }
-        const byDate = {};
-        let recognizedCount = 0;
-        let ignoredCount = 0;
-
-        function ensureDate(date) {
-          if (!byDate[date]) byDate[date] = { _quals: {}, _micros: [] };
-        }
-        function setField(date, key, val) {
-          ensureDate(date);
-          if (byDate[date][key] === undefined) byDate[date][key] = val;
-        }
-        function mergeData(date, data) {
-          ensureDate(date);
-          for (const [k, v] of Object.entries(data)) {
-            if (byDate[date][k] === undefined) byDate[date][k] = v;
-          }
-        }
-
-        for (const block of blocks) {
-          const date = extractCollectionDate(block);
-          if (!date) {
-            ignoredCount++;
-            continue;
-          }
-
-          const headerLine = block.split("\n")[0].trim();
-          // Passar o header completo ao resolveBlockAlias
-          // (ele identifica o material biológico e extrai o nome correto)
-          const blockKey = resolveBlockAlias(headerLine);
-
-          if (!blockKey) {
-            ignoredCount++;
-            continue;
-          }
-
-          // ── Hemograma
-          if (blockKey === "_HEMOGRAMA") {
-            const data = parseHemogramaBlock(block);
-            if (Object.keys(data).length) {
-              mergeData(date, data);
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Bilirrubinas
-          if (blockKey === "_BILIRRUBINAS") {
-            const data = parseBilirrubinaBlock(block);
-            if (Object.keys(data).length) {
-              mergeData(date, data);
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Proteínas totais
-          if (blockKey === "_PROTEINAS" || blockKey === "_ELETROFORESE") {
-            const data = parseProteinasBlock(block);
-            if (Object.keys(data).length) {
-              mergeData(date, data);
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Painel de ferro
-          if (blockKey === "_FERRO_PANEL") {
-            const data = parseFerroPanelBlock(block);
-            if (Object.keys(data).length) {
-              mergeData(date, data);
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Coagulograma TP
-          if (blockKey === "_TP") {
-            const data = parseCoagBlock(block, "_TP");
-            if (data["TP_seg"] || data["RNI"]) {
-              ensureDate(date);
-              if (data["TP_seg"]) setField(date, "TP_seg", data["TP_seg"]);
-              if (data["RNI"]) setField(date, "RNI", data["RNI"]);
-              if (data["TP_ativ"]) setField(date, "TP_ativ", data["TP_ativ"]);
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Coagulograma TTPA
-          if (blockKey === "_TTPA") {
-            const data = parseCoagBlock(block, "_TTPA");
-            if (data["TTPA_seg"] || data["TTPA_razao"]) {
-              ensureDate(date);
-              if (data["TTPA_seg"])
-                setField(date, "TTPA_seg", data["TTPA_seg"]);
-              if (data["TTPA_razao"])
-                setField(date, "TTPA_razao", data["TTPA_razao"]);
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Sorologias qualitativas
-          if (blockKey && blockKey.startsWith("_QUAL_")) {
-            const qual = parseQualBlock(block);
-            if (qual) {
-              ensureDate(date);
-              if (byDate[date]._quals[blockKey] === undefined) {
-                byDate[date]._quals[blockKey] = qual;
-              }
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Microbiológicos
-          if (blockKey && blockKey.startsWith("_MICRO_")) {
-            const { resultado, microorg } = parseMicroBlock(block);
-            if (resultado) {
-              const material = extractMaterial(headerLine);
-              ensureDate(date);
-              byDate[date]._micros.push({
-                key: blockKey,
-                material,
-                resultado,
-                microorg,
-              });
-              recognizedCount++;
-            } else ignoredCount++;
-            continue;
-          }
-
-          // ── Exame simples
-          const data = parseSimpleExamBlock(block, blockKey);
-          if (Object.keys(data).length) {
-            mergeData(date, data);
-            recognizedCount++;
-          } else ignoredCount++;
-        }
-
-        const output = formatLabsOutput(byDate);
-        return {
-          output,
-          recognizedCount,
-          ignoredCount,
-          dateCount: Object.keys(byDate).length,
-        };
-      }
-
-      /* ══════════════════════════════════════════════════════════════
-   FORMATAÇÃO DA SAÍDA
-══════════════════════════════════════════════════════════════ */
-
-      function formatLabsOutput(byDate) {
-        const dates = Object.keys(byDate).sort((a, b) =>
-          dateToSortKey(b).localeCompare(dateToSortKey(a)),
-        );
-
-        const lines = ["#LABS:"];
-
-        for (const date of dates) {
-          const data = byDate[date];
-          const parts = [];
-
-          for (const key of OUTPUT_ORDER) {
-            // ── LEUCO composto
-            if (key === "LEUCO") {
-              if (!data["LEUCO"]) continue;
-              const subs = LEUCO_SUBS.filter((s) => data[s]);
-              let str = `LEUCO ${data["LEUCO"]}`;
-              if (subs.length)
-                str += ` (${subs.map((s) => `${LEUCO_LABELS[s]} ${data[s]}`).join(" / ")})`;
-              parts.push(str);
-              continue;
-            }
-            // ── TP composto
-            if (key === "TP") {
-              if (!data["TP_seg"] && !data["RNI"]) continue;
-              let str = "TP";
-              if (data["TP_seg"]) str += ` ${data["TP_seg"]}s`;
-              if (data["RNI"]) str += ` (RNI ${data["RNI"]})`;
-              parts.push(str);
-              continue;
-            }
-            // ── TTPA composto
-            if (key === "TTPA") {
-              if (!data["TTPA_seg"] && !data["TTPA_razao"]) continue;
-              let str = "TTPA";
-              if (data["TTPA_seg"]) str += ` ${data["TTPA_seg"]}s`;
-              if (data["TTPA_razao"]) str += ` (razão ${data["TTPA_razao"]})`;
-              parts.push(str);
-              continue;
-            }
-            // ── Sorologias qualitativas
-            if (key.startsWith("_QUAL_")) {
-              const qual = data._quals && data._quals[key];
-              if (!qual) continue;
-              parts.push(`${QUAL_LABELS[key]} ${qual}`);
-              continue;
-            }
-            // ── Campo simples
-            if (data[key] !== undefined) {
-              parts.push(`${key} ${data[key]}`);
-            }
-          }
-
-          // ── Microbiológicos (após todos os outros)
-          if (data._micros && data._micros.length) {
-            for (const m of data._micros) {
-              const label = MICRO_LABELS[m.key] || m.key;
-              const mat = m.material ? `(${m.material})` : "";
-              const qual = normalizeQual(m.resultado);
-              let str = `${label}${mat} ${qual}`;
-              if (qual === "POS" && m.microorg) {
-                str += `: ${m.microorg.slice(0, 40)}`;
-              }
-              parts.push(str);
-            }
-          }
-
-          if (parts.length) lines.push(`${date}: ${parts.join(" / ")}`);
-        }
-
-        return lines.join("\n");
-      }
-
-      /* ══════════════════════════════════════════════════════════════
-   EXEMPLO v2 (cobre todos os novos tipos)
-══════════════════════════════════════════════════════════════ */
-      const EXEMPLO = `HOSPITAL DO SERVIDOR PÚBLICO ESTADUAL - FMO
-SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS
-Diretor Técnico: Dra. Patricia Mantovani - CRF-SP: 20292
-Nº CEVS: 355030890-861-014006-1-4 CRF-SP:61205
-Av. Ibirapuera 981 - Indianópolis - 04029-000 - São Paulo - SP
-Emissão: 12/08/2025-06:54
-Pedido: 250243990
-Prontuário: 1466847 Paciente: DENIZE CRISTINA NETO ALVES
-Data Nasc.: 15/09/1972 Sexo:F Idade: 52a 10m 27d Data Solicitação: 06/08/2025 - 09:48
-Solicitante: Dr.(a): ANA PAULA OKAMOTO - CRM N°: 226743
-Setor solicitante: AMBULATORIO DE DERMATOLOGIA
-Responsável: MARISA TAMIKO OGURA - CRF: 16933
-Os resultados dos exames laboratoriais não são indicadores absolutos do diagnóstico.
-HEMOGRAMA,SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:35
-ERITROGRAMA
-Resultados Valores de referência Metodologia
-Hemoglobina 13,7 g/dL 12,0 a 16,0 g/dL morfológico quando aplicável
-Hematócrito 43,3 % 35,0 a 47,0 %
-VCM 83,5 fL 80,0 a 100,0 fL
-HCM 26,4 pg 27,0 a 32,0 pg
-CHCM 31,6 g/dL 32,0 a 37,0 g/dL
-RDW-CV 15,3 % 9,5 a 14,8 %
-LEUCOGRAMA
-LEUCÓCITOS 8,39 mil/mm³ 4,00 a 11,00 mil/mm³ Automatizada
-Neutrófilos 72,20 % 6,06 mil/mm³ 1,7 a 8 mil/mm³
-Eosinófilos 1,40 % 0,12 mil/mm³ 0,05 a 0,50 mil/mm³
-Basófilos 0,40 % 0,03 mil/mm³ 0,00 a 0,10 mil/mm³
-Linfócitos 20,30 % 1,70 mil/mm³ 0,90 a 2,90 mil/mm³
-Monócitos 5,70 % 0,48 mil/mm³ 0,30 a 0,90 mil/mm³
-PLAQUETAS Valores de referência Metodologia
-Resultados: 314 mil/mm³ 150 a 400 mil/mm³ Automatizada
-MARISA TAMIKO OGURA
-CRF 16933
-GLICOSE, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-91 mg/dL 75 a 99 mg/dL Enzimático
-Resultados anteriores:
-93 (12/12/2024)
-HEMOGLOBINA GLICADA, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 15:02
-Resultado Valores de referência Método
-5,5 % 4,3 a 6,5 % HPLC
-Resultados anteriores:
-URÉIA, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-29 mg/dL 17 a 43 mg/dL Enzimático
-Resultados anteriores:
-CREATININA, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
-Resultado Valores de referência Método
-0,98 mg/dL 0,70 a 1,10 mg/dL Colorimétrico
-Resultados anteriores:
-TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)
-Resultado Valores de referência* Método
-TFGE para etnia negra: 77 mL/min/1,73m2 >90 Fórmula CKD-EPI
-SÓDIO, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-138 mEq/L 136 a 145 mEq/L Íon eletrodo seletivo
-Resultados anteriores:
-POTÁSSIO, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-4,2 mEq/L 3,5 a 5,1 mEq/L Íon eletrodo seletivo
-Resultados anteriores:
-ASPARTATO AMINO TRANSFERASE (TGO), SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
-Resultado Valores de referência Método
-14 U/L 13 a 39 U/L Enzimático
-Resultados anteriores:
-ALANINO AMINO TRANSFERASE (TGP), SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-10 U/L 0 a 35 U/L Enzimático
-Resultados anteriores:
-FOSFATASE ALCALINA (FAL), SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
-Resultado Valores de referência Método
-77 U/L 30 a 120 U/L Enzimático
-Resultados anteriores:
-GAMA GT (GGT), SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-24 U/L 9 a 64 U/L Enzimático
-Resultados anteriores:
-BILIRRUBINAS TOTAL E FRAÇÕES, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:20
-Resultado Valores de referência Método
-Bilirrubina direta 0,07 mg/dl 0,00 a 0,20 mg/dL Colorimétrico
-Bilirrubinas totais 0,44 mg/dl 0,30 a 1,20 mg/dL
-Bilirrubina indireta 0,37 mg/dl
-PROTEÍNA C REATIVA, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-1,36 mg/dL 0,00 a 0,50 mg/dL Imuno-turbidimétrico
-Resultados anteriores:
-FERRO, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 12:22
-Resultado Valores de referência Método
-104 µg/dL 60 a 180 µg/dL Colorimétrico
-Resultados anteriores:
-CAPACIDADE TOTAL DE LIGAÇÃO DE FERRO, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 00:00
-Resultado Valores de referência Método Resultados anteriores
-Capacidade total de ligação de ferro 465,00 µg/dL 225 a 535 µg/dL Colorimétrico
-Capacidade latente de ligação de ferro 361,00 µg/dL 155 a 355 µg/dL
-Índice de saturação de transferrina 22,37 % 20 a 50 %
-TIROXINA LIVRE (T4L), SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 13:53
-Resultado Valores de referência Método
-0,79 ng/dl 0,61 a 1,12 ng/dl Quimioluminescência
-Resultados anteriores:
-HORMÔNIO TIREOTRÓFICO (TSH), SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:38
-Resultado Valores de referência Método
- 1,05 µUI/ml 0,34 a 5,33 µUI/ml Quimioluminescência
-Resultados anteriores:
-FERRITINA, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 13:53
-Resultado Valores de referência Método
-39,0 ng/ml Homens: 23,9 a 336,2 ng/ml Quimioluminescência
-Resultados anteriores:
-ÁCIDO FÓLICO, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 13:53
-Resultado Valores de referência Método
-10,3 ng/ml 3,1 a 19,9 ng/ml Quimiluminescência
-Resultados anteriores:
-25 OH VITAMINA D, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:05
-Resultado Valores de referência Método
-22,2 ng/mL < 10,0 ng/mL Deficiência CMIA
-Resultados anteriores:
-TEMPO DE PROTROMBINA, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:21
-Resultado Valores de referência Método
-Tempo de protrombina 11,9 seg 12,5 a 14,5 seg Coagulométrico
-Atividade 89,0 % igual ou > 70%
-RNI 1,090
-Resultados anteriores (INR):
-TEMPO DE TROMBOPLASTINA PARCIAL ATIVADO, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:21
-Resultado Valores de referência Método
-TTPA 31,0 seg 23,0 a 34,0 seg Coagulorimétrico
-Razão 1,05 0,85 a 1,26
-Resultados anteriores (razão):
-HBsAG, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:45
-Resultado Valores de referência Método
-Não Reagente
-Índice: 0,17 S/CO
-< 0,80 S/CO Não reagente
-Resultados anteriores:
-HCV, PESQUISA DE ANTICORPOS, SANGUE
-Coletado em: 06/08/2025 09:58 Liberado em: 06/08/2025 11:45
-Resultado Valores de referência Método
-Não reagente
-Índice: 0,10 S/CO
-Resultados anteriores:
-HIV, anticorpos e antígeno p24, SANGUE
-Coletado em:06/08/2025 09:58 Liberado em: 06/08/2025 11:50
-Resultado Valor de referência Método
-Não reagente
-Índice: 0,25 S/CO
-Resultados anteriores:
-CULTURA AEROBIA RESPIRATORIO
-INFERIOR, LAVADO BRONCOALVEOLAR
-Coletado: 28/03/2024 12:56 Liberado:08/04/2024 09:23
-Resultado:Não houve crescimento de prováveis patógenos
-Local Anatômico da coleta:
-CULTURA DE FUNGO RESPIRATORIO
-INFERIOR, LAVADO BRONCOALVEOLAR
-Coletado: 28/03/2024 12:56 Liberado:05/04/2024 06:59
-Resultado:Positivo
-Local Anatômico da coleta:
-Microorganismo: Fungo filamentoso hialino, sugestivo de contaminante
-PESQUISA DE BAAR, LAVADO BRONCOALVEOLAR
-Coletado em: 28/03/2024 13:09 Liberado em: 01/04/2024 11:56
-Resultado Valores de referência Método
-Negativa Negativa Coloração de Ziehl-Nielsen`;
-
-      /* ══════════════════════════════════════════════════════════════
-   UI
-══════════════════════════════════════════════════════════════ */
-
-      const elInput = document.getElementById("input-laudo");
-      const elOutput = document.getElementById("output-box");
-      const elSection = document.getElementById("output-section");
-      const btnProc = document.getElementById("btn-processar");
-      const btnCopy = document.getElementById("btn-copiar");
-      const btnLimpar = document.getElementById("btn-limpar");
-      const btnExemplo = document.getElementById("btn-exemplo");
-      const msgError = document.getElementById("msg-error");
-      const msgWarn = document.getElementById("msg-warn");
-      const msgSuccess = document.getElementById("msg-success");
-      const msgInfo = document.getElementById("msg-info");
-      const liveRegion = document.getElementById("live-region");
-
-      function hideAllMsgs() {
-        [msgError, msgWarn, msgSuccess, msgInfo].forEach((m) => {
-          m.classList.remove("visible");
-          m.textContent = "";
-        });
-      }
-      function showMsg(el, text) {
-        hideAllMsgs();
-        el.textContent = text;
-        el.classList.add("visible");
-        liveRegion.textContent = text;
-      }
-      function announce(text) {
-        liveRegion.textContent = "";
-        requestAnimationFrame(() => {
-          liveRegion.textContent = text;
-        });
-      }
-
-      btnProc.addEventListener("click", () => {
-        const raw = elInput.value.trim();
-        if (!raw) {
-          showMsg(
-            msgError,
-            "Nenhum texto informado. Cole o conteúdo do laudo do IAMSPE no campo acima.",
-          );
-          elInput.focus();
-          return;
-        }
-        hideAllMsgs();
-        let result;
-        try {
-          result = processLabText(raw);
-        } catch (err) {
-          showMsg(msgError, `Erro interno no processamento: ${err.message}.`);
-          return;
-        }
-        const hasOutput =
-          result.output && result.output !== "#LABS:" && result.dateCount > 0;
-        if (!hasOutput) {
-          showMsg(
-            msgError,
-            "Nenhum exame reconhecido no texto informado. " +
-              "Confira se o conteúdo foi copiado integralmente do laudo do IAMSPE.",
-          );
-          elSection.hidden = true;
-          elOutput.classList.remove("visible");
-          btnCopy.disabled = true;
-          btnCopy.setAttribute("aria-disabled", "true");
-          return;
-        }
-        elOutput.textContent = result.output;
-        elOutput.classList.add("visible");
-        elSection.hidden = false;
-        btnCopy.disabled = false;
-        btnCopy.setAttribute("aria-disabled", "false");
-        const successText = `${result.dateCount} data(s) · ${result.recognizedCount} bloco(s) processado(s).`;
-        showMsg(msgSuccess, successText);
-        if (result.ignoredCount > 0) {
-          setTimeout(() => {
-            msgWarn.textContent = `${result.ignoredCount} bloco(s) não reconhecido(s) ou fora do escopo foram ignorados.`;
-            msgWarn.classList.add("visible");
-          }, 80);
-        }
-        announce(`Exames processados. ${successText}`);
-        elSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-
-      btnCopy.addEventListener("click", async () => {
-        const text = elOutput.textContent;
-        if (!text) return;
-        try {
-          await navigator.clipboard.writeText(text);
-          btnCopy.textContent = "✓ Copiado!";
-          announce("Saída copiada para a área de transferência.");
-          setTimeout(() => {
-            btnCopy.textContent = "Copiar saída";
-          }, 2000);
-        } catch {
-          const range = document.createRange();
-          range.selectNodeContents(elOutput);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          showMsg(msgInfo, "Selecione o texto e use Ctrl+C / Cmd+C.");
-        }
-      });
-
-      btnLimpar.addEventListener("click", () => {
-        elInput.value = "";
-        elOutput.textContent = "";
-        elOutput.classList.remove("visible");
-        elSection.hidden = true;
-        btnCopy.disabled = true;
-        btnCopy.setAttribute("aria-disabled", "true");
-        hideAllMsgs();
-        elInput.focus();
-        announce("Campo limpo.");
-      });
-
-      btnExemplo.addEventListener("click", () => {
-        elInput.value = EXEMPLO;
-        hideAllMsgs();
-        showMsg(
-          msgInfo,
-          "Exemplo carregado. Clique em Processar para ver o resultado.",
-        );
-        elInput.focus();
-        announce("Texto de exemplo carregado.");
-      });
-
-      /* ─── Tabs ───────────────────────────────────────────────────── */
-      const tabs = Array.from(document.querySelectorAll("[role='tab']"));
-      const panels = Array.from(document.querySelectorAll("[role='tabpanel']"));
-
-      function activateTab(tab) {
-        tabs.forEach((t) => {
-          const sel = t === tab;
-          t.setAttribute("aria-selected", String(sel));
-          t.tabIndex = sel ? 0 : -1;
-        });
-        panels.forEach((p) => {
-          p.classList.toggle(
-            "active",
-            p.id === tab.getAttribute("aria-controls"),
-          );
-        });
-      }
-      tabs.forEach((tab) => {
-        tab.addEventListener("click", () => activateTab(tab));
-        tab.addEventListener("keydown", (e) => {
-          let idx = tabs.indexOf(e.currentTarget);
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            idx = (idx + 1) % tabs.length;
-          } else if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            idx = (idx - 1 + tabs.length) % tabs.length;
-          } else if (e.key === "Home") {
-            e.preventDefault();
-            idx = 0;
-          } else if (e.key === "End") {
-            e.preventDefault();
-            idx = tabs.length - 1;
-          } else return;
-          tabs[idx].focus();
-          activateTab(tabs[idx]);
-        });
-      });
-    </script>
-  </body>
+    </div>
+
+  </div><!-- /panel-processar -->
+
+  <!-- ABA 2: COMO USAR -->
+  <div role="tabpanel" id="panel-como-usar" aria-labelledby="tab-como-usar" tabindex="0">
+    <div class="card">
+      <p class="section-title">Passo a passo</p>
+      <ol class="step-list">
+        <li>Acesse o sistema de laudos do IAMSPE (ambulatório ou pronto-socorro) e localize os exames do paciente.</li>
+        <li>Selecione e copie o texto completo — pode incluir múltiplos exames e datas diferentes.</li>
+        <li>Volte para a aba <strong>Processar Exames</strong> e cole no campo principal.</li>
+        <li>Clique em <strong>Processar</strong>. A ferramenta identifica, agrupa por data e formata automaticamente.</li>
+        <li><strong>Revise com atenção</strong> comparando com o laudo original antes de usar.</li>
+        <li>Clique em <strong>Copiar saída</strong> e utilize conforme necessário.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <p class="section-title">Sistemas suportados</p>
+      <p class="section-desc">A v3 reconhece dois formatos de laudo do IAMSPE:</p>
+      <ul style="font-size:.875rem;color:var(--texto-suave);line-height:1.8;padding-left:1.2rem;">
+        <li><strong>Ambulatório</strong> — SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS (material: SANGUE, SORO, URINA)</li>
+        <li><strong>Pronto-socorro</strong> — LABORATÓRIO BIOFAST (material: PLASMA HEPARINIZADO, PLASMA CITRATADO, SANGUE TOTAL EDTA, SANGUE VENOSO, SANGUE ARTERIAL)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="section-title">Exemplo de saída</p>
+      <div class="example-block">#LABS:
+31/03/2026: Hb 14,2 / Ht 42,1 / VCM 89,2 / HCM 30,1 / CHCM 33,7 / RDW 13,3 / LEUCO 14,72 (neut. 12,19 / eos. 0,03 / baso 0,03 / linf. 1,53 / mono 0,94) / PLQ 186 / U 214,8 / CR 7,09 / Na 142 / K 5,9 / CaI 1,15 / TGO 127 / TGP 42 / FAL 246 / GGT 466 / TP Ativ 50,7% (RNI 1,39) / TTPA 59,30s (razão 1,81) / GasoV: pH 7,215 / pCO2 45,4 / pO2 28,9 / HCO3 18 / BE -9,8 / sO2 46,7 / PCR 46,74 / Lactato 4,76</div>
+    </div>
+    <div class="card">
+      <p class="section-title">Notas importantes</p>
+      <ul style="font-size:.875rem;color:var(--texto-suave);line-height:1.7;padding-left:1.2rem;">
+        <li>Exames sem data de coleta reconhecível são ignorados (ex: TFGE).</li>
+        <li>Valores são apresentados sem unidade e sem intervalo de referência.</li>
+        <li>Leucograma: valores absolutos em mil/mm³. Biofast fornece /mm³ — a ferramenta converte automaticamente.</li>
+        <li>Sorologias aparecem como: <code>HBsAg NR</code>, <code>HCV NR</code>, <code>HIV NR</code>.</li>
+        <li>Gasometria: <code>GasoV</code> (venosa), <code>GasoA</code> (arterial), <code>GasoC</code> (capilar).</li>
+        <li><strong>Não compartilhe laudos com dados identificáveis em ambientes não seguros.</strong></li>
+      </ul>
+    </div>
+  </div><!-- /panel-como-usar -->
+
+  <!-- ABA 3: AVISOS -->
+  <div role="tabpanel" id="panel-avisos" aria-labelledby="tab-avisos" tabindex="0">
+    <div class="card aviso-card">
+      <h2>Finalidade da ferramenta</h2>
+      <p>Esta ferramenta tem <strong>finalidade exclusivamente operacional de apoio</strong> à organização de dados laboratoriais. Foi desenvolvida para facilitar a padronização textual de resultados já disponíveis no prontuário, sem qualquer função diagnóstica ou terapêutica.</p>
+
+      <h2>Ausência de interpretação clínica</h2>
+      <p>A ferramenta <strong>não interpreta, não analisa e não emite nenhum julgamento clínico</strong> sobre os valores apresentados. Não há alertas automáticos de normalidade ou anormalidade. A responsabilidade pela interpretação é exclusivamente do profissional de saúde habilitado.</p>
+
+      <h2>Possibilidade de erros</h2>
+      <p>Erros de extração, padronização, cálculo, agrupamento ou omissão <strong>podem ocorrer</strong>, especialmente em laudos com formatação atípica, colagens incompletas ou variações no padrão dos sistemas de origem. O resultado gerado não substitui o laudo original.</p>
+
+      <h2>Obrigatoriedade de conferência</h2>
+      <p><strong>Sempre confira o resultado final com o documento original</strong> antes de utilizá-lo em prontuário, conduta assistencial, discussão de caso ou qualquer outra finalidade. O uso sem revisão adequada é de responsabilidade exclusiva do usuário.</p>
+
+      <h2>Privacidade e segurança de dados</h2>
+      <p>O processamento ocorre <strong>integralmente no navegador do usuário</strong>. Nenhum dado é transmitido para servidores externos, coletado, armazenado ou registrado por esta aplicação. Recomenda-se atenção ao uso em dispositivos compartilhados.</p>
+
+      <h2>Limitação de responsabilidade</h2>
+      <p>O desenvolvedor e os mantenedores desta ferramenta <strong>não garantem ausência de erros</strong> e não assumem responsabilidade por danos decorrentes do uso sem conferência adequada ou sem revisão humana final por profissional competente.</p>
+
+      <h2>Versão atual</h2>
+      <p><strong>v3.0</strong> — Suporta laudos do ambulatório e do pronto-socorro (Biofast). Contempla hemograma, bioquímica básica, eletrólitos, coagulograma (TP/TTPA), gasometria (venosa/arterial/capilar), lactato, perfil lipídico, função hepática, bilirrubinas, proteínas, metabolismo do ferro, tireoide, vitaminas, sorologias qualitativas e exames microbiológicos.</p>
+    </div>
+  </div><!-- /panel-avisos -->
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <strong>Revise sempre a saída com o laudo original antes de utilizar.</strong><br>
+    IAMSPE Labs v3 · Apoio operacional · Processamento local · Sem backend
+  </div>
+</footer>
+
+<!--
+  Módulos JS carregados em ordem de dependência:
+  aliases → normalizer → parsers → formatter → pipeline → example → ui
+  Cada módulo depende das variáveis globais definidas pelos anteriores.
+-->
+<script src="js/aliases.js"></script>
+<script src="js/normalizer.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/formatter.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/example.js"></script>
+<script src="js/ui.js"></script>
+
+</body>
 </html>
