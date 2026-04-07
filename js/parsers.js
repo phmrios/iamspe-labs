@@ -32,7 +32,7 @@
 
 function parseHemograma(block) {
   const result = {};
-  const lines  = block.split("\n");
+  const lines = block.split("\n");
   let pastResultados = false;
 
   for (const rawLine of lines) {
@@ -40,11 +40,18 @@ function parseHemograma(block) {
     if (!line) continue;
 
     // Parar ao atingir histórico
-    if (/^\s*resultados?\s+anteriores\s*:/im.test(line)) { pastResultados = true; }
+    if (/^\s*resultados?\s+anteriores\s*:/im.test(line)) {
+      pastResultados = true;
+    }
     if (pastResultados) continue;
 
     // Pular seções internas e cabeçalhos de tabela
-    if (/^(eritrograma|leucograma|plaquetas\s+valores|plaquetas\s*$|observa[çc][oõ]es|resultados?\s+valores|metodologia|automatizada|hemograma|coletado|liberado|metodo|hemac)/i.test(line)) continue;
+    if (
+      /^(eritrograma|leucograma|plaquetas\s+valores|plaquetas\s*$|observa[çc][oõ]es|resultados?\s+valores|metodologia|automatizada|hemograma|coletado|liberado|metodo|hemac)/i.test(
+        line,
+      )
+    )
+      continue;
 
     // Plaquetas Biofast: "Resultados: 186.000 /mm³"
     // Plaquetas Ambulatório: "Resultados: 213 mil/mm³"
@@ -57,9 +64,7 @@ function parseHemograma(block) {
       if (num) {
         // Se PLQ veio em /mm³ (valor > 10000), converter para mil/mm³
         const plqFloat = parseFloat(num.replace(",", "."));
-        const plqNorm = plqFloat > 10000
-          ? (plqFloat / 1000).toFixed(0)
-          : num;
+        const plqNorm = plqFloat > 10000 ? (plqFloat / 1000).toFixed(0) : num;
         if (!result["PLQ"]) result["PLQ"] = plqNorm;
       }
       continue;
@@ -71,22 +76,28 @@ function parseHemograma(block) {
     for (let i = 0; i < tokens.length; i++) {
       const t = tokens[i];
       // Número isolado (inteiro ou decimal com vírgula/ponto)
-      if (/^-?\d+([,.]\d+)?$/.test(t)) { nameEndIdx = i; break; }
+      if (/^-?\d+([,.]\d+)?$/.test(t)) {
+        nameEndIdx = i;
+        break;
+      }
     }
     if (nameEndIdx === 0 || nameEndIdx >= tokens.length) continue;
 
     const namePart = tokens.slice(0, nameEndIdx).join(" ");
-    const key      = resolveHemoAlias(namePart);
-    if (!key) continue;
+    const key = resolveHemoAlias(namePart);
+    if (key === undefined) continue; // não reconhecido
+    if (key === null) continue; // reconhecido mas explicitamente ignorado (ex: Hemácias)
 
     // Coletar todos os números puros da parte de valor
     // (ignora tokens com letras, separadores de milhar no meio, etc.)
     const valueTokens = tokens.slice(nameEndIdx);
     const nums = valueTokens
-      .map(t => {
+      .map((t) => {
         // Remove separador de milhar antes de checar
         const cleaned = t.replace(/\.(\d{3})/g, "$1");
-        return /^-?\d+([,.]\d+)?$/.test(cleaned) ? cleaned.replace(".", ",") : null;
+        return /^-?\d+([,.]\d+)?$/.test(cleaned)
+          ? cleaned.replace(".", ",")
+          : null;
       })
       .filter(Boolean);
 
@@ -105,9 +116,10 @@ function parseHemograma(block) {
         if (firstVal === 100 && nums.length >= 2) {
           const absRaw = parseFloat(nums[1].replace(",", "."));
           // Converter /mm³ para mil/mm³ se valor > 500
-          result["LEUCO"] = absRaw > 500
-            ? (absRaw / 1000).toFixed(2).replace(".", ",")
-            : nums[1];
+          result["LEUCO"] =
+            absRaw > 500
+              ? (absRaw / 1000).toFixed(2).replace(".", ",")
+              : nums[1];
         } else {
           result["LEUCO"] = nums[0];
         }
@@ -153,7 +165,9 @@ function parseHemograma(block) {
     for (const subKey of LEUCO_ORDER) {
       if (!result[subKey] && result[`${subKey}_pct`]) {
         const pct = parseFloat(result[`${subKey}_pct`].replace(",", "."));
-        result[subKey] = (leucoFloat * pct / 100).toFixed(2).replace(".", ",");
+        result[subKey] = ((leucoFloat * pct) / 100)
+          .toFixed(2)
+          .replace(".", ",");
       }
     }
   }
@@ -172,15 +186,21 @@ function parseHemograma(block) {
 
 function parsePanelBlock(block) {
   const result = {};
-  const lines  = block.split("\n");
+  const lines = block.split("\n");
   let pastResultados = false;
 
   for (const line of lines) {
     const l = line.trim();
     if (!l) continue;
-    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) { pastResultados = true; }
+    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) {
+      pastResultados = true;
+    }
     if (pastResultados) continue;
-    if (/^(coletado|liberado|resultado|valores|metodo)/i.test(l)) continue;
+    if (/^(coletado|liberado|resultado|valores|metodo|nota)/i.test(l)) continue;
+
+    // Rejeitar linhas soltas de resultado anterior: "56,8 (21/08/2023)" ou "104 (14/11/2021)"
+    // Padrão: número (com ou sem decimal) seguido de data entre parênteses
+    if (/^-?\d+([,.]\d+)?\s+\(\d{2}\/\d{2}\/\d{4}\)/.test(l)) continue;
 
     // "Capacidade latente..." → sempre ignorar
     if (/capacidade\s+latente/i.test(l)) continue;
@@ -188,13 +208,16 @@ function parsePanelBlock(block) {
     const tokens = l.split(/\s+/);
     let nameEndIdx = tokens.length;
     for (let i = 0; i < tokens.length; i++) {
-      if (/^\d+([,.]\d+)?$/.test(tokens[i])) { nameEndIdx = i; break; }
+      if (/^\d+([,.]\d+)?$/.test(tokens[i])) {
+        nameEndIdx = i;
+        break;
+      }
     }
     if (nameEndIdx === 0 || nameEndIdx >= tokens.length) continue;
 
     const namePart = tokens.slice(0, nameEndIdx).join(" ");
     const panelKey = resolvePanelAlias(namePart);
-    if (!panelKey) continue;  // null = ignorar (capacidade latente)
+    if (!panelKey) continue; // null = ignorar (capacidade latente)
 
     const num = extractFirstNumber(tokens.slice(nameEndIdx).join(" "));
     if (num && result[panelKey] === undefined) result[panelKey] = num;
@@ -205,8 +228,8 @@ function parsePanelBlock(block) {
 
 // Aliases específicos para manter interface clara nos callers
 const parseBilirrubinas = parsePanelBlock;
-const parseProteinas    = parsePanelBlock;
-const parseFerroPainel  = parsePanelBlock;
+const parseProteinas = parsePanelBlock;
+const parseFerroPainel = parsePanelBlock;
 
 /* ══════════════════════════════════════════════════════════════
    COAGULOGRAMA — TP
@@ -219,9 +242,9 @@ const parseFerroPainel  = parsePanelBlock;
 function parseCoagTP(block) {
   const result = parsePanelBlock(block);
   return {
-    TP_seg:  result["TP_seg"]  ?? null,
+    TP_seg: result["TP_seg"] ?? null,
     TP_ativ: result["TP_ativ"] ?? null,
-    RNI:     result["RNI"]     ?? null,
+    RNI: result["RNI"] ?? null,
   };
 }
 
@@ -232,7 +255,7 @@ function parseCoagTP(block) {
 function parseCoagTTPA(block) {
   const result = parsePanelBlock(block);
   return {
-    TTPA_seg:   result["TTPA_seg"]   ?? null,
+    TTPA_seg: result["TTPA_seg"] ?? null,
     TTPA_razao: result["TTPA_razao"] ?? null,
   };
 }
@@ -253,26 +276,36 @@ function parseCoagTTPA(block) {
 
 function parseGasometria(block) {
   const result = {};
-  const lines  = block.split("\n");
+  const lines = block.split("\n");
   let pastResultados = false;
 
   for (const line of lines) {
     const l = line.trim();
     if (!l) continue;
-    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) { pastResultados = true; }
+    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) {
+      pastResultados = true;
+    }
     if (pastResultados) continue;
-    if (/^(coletado|liberado|resultado|valores|metodo|potenc|ampero|henderson|nota|gasometria)/i.test(l)) continue;
+    if (
+      /^(coletado|liberado|resultado|valores|metodo|potenc|ampero|henderson|nota|gasometria)/i.test(
+        l,
+      )
+    )
+      continue;
 
     const tokens = l.split(/\s+/);
     let nameEndIdx = tokens.length;
     for (let i = 0; i < tokens.length; i++) {
       // Aceitar também número negativo como início dos valores
-      if (/^-?\d+([,.]\d+)?$/.test(tokens[i])) { nameEndIdx = i; break; }
+      if (/^-?\d+([,.]\d+)?$/.test(tokens[i])) {
+        nameEndIdx = i;
+        break;
+      }
     }
     if (nameEndIdx === 0 || nameEndIdx >= tokens.length) continue;
 
-    const namePart  = tokens.slice(0, nameEndIdx).join(" ");
-    const panelKey  = resolvePanelAlias(namePart);
+    const namePart = tokens.slice(0, nameEndIdx).join(" ");
+    const panelKey = resolvePanelAlias(namePart);
     if (!panelKey || !panelKey.startsWith("Gaso_")) continue;
 
     // Pegar APENAS o primeiro número (ignora resultados anteriores na mesma linha)
@@ -296,15 +329,24 @@ function parseQualitativo(block) {
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i].trim();
     if (!l) continue;
-    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) { pastResultados = true; }
+    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) {
+      pastResultados = true;
+    }
     if (pastResultados) continue;
 
     // Ignorar linhas de metadados / valores de referência / métodos
-    if (/^(coletado|liberado|resultado\s+valor|resultado\s*$|valores\s+de|metodo|metodologia|indice|cmia|quimio|imuno|elisa|eletro|turbidim)/i.test(l)) continue;
+    if (
+      /^(coletado|liberado|resultado\s+valor|resultado\s*$|valores\s+de|metodo|metodologia|indice|cmia|quimio|imuno|elisa|eletro|turbidim)/i.test(
+        l,
+      )
+    )
+      continue;
     // Ignorar linhas de referência numérica (ex: "< 0,80 S/CO Não reagente")
     if (/^[<>]\s*[\d,]/.test(l)) continue;
 
-    if (/n[ãa]o\s*reagente|n[ãa]o\s*houve|negati|positiv|inconclusiv/i.test(l)) {
+    if (
+      /n[ãa]o\s*reagente|n[ãa]o\s*houve|negati|positiv|inconclusiv/i.test(l)
+    ) {
       return normalizeQual(l);
     }
     if (/^reagente$/i.test(l)) return "R";
@@ -318,9 +360,9 @@ function parseQualitativo(block) {
 ══════════════════════════════════════════════════════════════ */
 
 function parseMicrobiologico(block) {
-  const lines    = block.split("\n");
-  let resultado  = null;
-  let microorg   = null;
+  const lines = block.split("\n");
+  let resultado = null;
+  let microorg = null;
 
   for (const line of lines) {
     const l = line.trim();
@@ -328,11 +370,17 @@ function parseMicrobiologico(block) {
 
     // "Resultado: Negativo" ou "Resultado:Positivo"
     const resMatch = l.match(/^resultado\s*:\s*(.+)/i);
-    if (resMatch) { resultado = resMatch[1].trim(); continue; }
+    if (resMatch) {
+      resultado = resMatch[1].trim();
+      continue;
+    }
 
     // "Microorganismo: Fungo filamentoso hialino..."
     const microMatch = l.match(/^microorganismo\s*:\s*(.+)/i);
-    if (microMatch) { microorg = microMatch[1].trim(); continue; }
+    if (microMatch) {
+      microorg = microMatch[1].trim();
+      continue;
+    }
 
     // BAAR / bacterioscopia: resultado na linha de valor sem prefixo
     if (/^(negativ|positiv|n[ãa]o\s*houve)/i.test(l) && !resultado) {
@@ -365,14 +413,25 @@ function parseSimples(block, blockKey) {
 
   for (let i = 1; i < lines.length; i++) {
     const rawLine = lines[i];
-    const l       = rawLine.trim();
+    const l = rawLine.trim();
 
     if (!l) continue;
-    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) { pastResultados = true; }
+    if (/^\s*resultados?\s+anteriores\s*:/im.test(l)) {
+      pastResultados = true;
+    }
     if (pastResultados) continue;
 
     // Pular cabeçalhos de tabela e metadados
-    if (/^(coletado|liberado|resultado\s+valor|resultado\s*$|valores\s+de\s+refer|metodo|metodologia)/i.test(l)) continue;
+    if (
+      /^(coletado|liberado|resultado\s+valor|resultado\s*$|valores\s+de\s+refer|metodo|metodologia|nota)/i.test(
+        l,
+      )
+    )
+      continue;
+
+    // Rejeitar linha solta de resultado anterior: "0.21 (25/05/2025)"
+    // Padrão: número seguido de data entre parênteses — é histórico, não valor atual
+    if (/^-?\d+([,.]\d+)?\s+\(\d{2}\/\d{2}\/\d{4}\)/.test(l)) continue;
 
     // Linha que começa com número (espaço líder tolerado)
     if (/^\s*-?\d/.test(rawLine) && !found) {
