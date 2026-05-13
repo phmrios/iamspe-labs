@@ -94,10 +94,14 @@ const ALIASES_BLOCK = {
   "gama-gt": "GGT",
   amilase: "Amilase",
   lipase: "Lipase",
+  "desidrogenase latica": "DHL", // Biofast: "DESIDROGENASE LÁTICA (DHL)"
+  dhl: "DHL",
 
-  // Bilirrubinas (bloco composto)
+  // Bilirrubinas (bloco composto) — "TOTAL" e "TOTAIS" (Biofast usa plural)
   "bilirrubinas total e fracoes": "_BILIRRUBINAS",
   "bilirrubinas total e frações": "_BILIRRUBINAS",
+  "bilirrubinas totais e fracoes": "_BILIRRUBINAS",
+  "bilirrubinas totais e frações": "_BILIRRUBINAS",
 
   // Proteínas (bloco composto)
   "proteinas totais e fracoes": "_PROTEINAS",
@@ -142,6 +146,15 @@ const ALIASES_BLOCK = {
   // Outros
   cpk: "CPK",
   ck: "CPK",
+
+  // Marcadores cardíacos
+  "troponina i ultrassensivel": "TropI",
+  "troponina i": "TropI",
+  "troponina t ultrassensivel": "TropT",
+  "troponina t": "TropT",
+  "peptideo natriuretico tipo b": "NTproBNP",
+  "nt-probnp": "NTproBNP",
+  bnp: "BNP",
 
   // Imunologia / imunoglobulinas
   "imunoglobulina g": "IgG",
@@ -304,6 +317,7 @@ const OUTPUT_ORDER = [
   "TGP",
   "FAL",
   "GGT",
+  "DHL",
   "BilT",
   "BilD",
   "BilI",
@@ -359,6 +373,10 @@ const OUTPUT_ORDER = [
 
   // Outros
   "CPK",
+  "TropI",
+  "TropT",
+  "NTproBNP",
+  "BNP",
   "IgG",
   "IgA",
   "IgM",
