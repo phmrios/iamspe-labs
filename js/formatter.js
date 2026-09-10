@@ -6,7 +6,7 @@
  *
  * Regras de formatação:
  * - Uma linha por data, ordem cronológica decrescente
- * - Campos separados por " / "
+ * - Campos separados por " | "
  * - LEUCO com diferenciais inline: "LEUCO 6,06 (neut. 4,03 / eos. 0,02 / ...)"
  * - TP composto: "TP 13,6s / Ativ 89% (RNI 1,090)"  ou  "TP Ativ 50,7% (RNI 1,39)"
  * - TTPA composto: "TTPA 37,5s (razão 1,27)"
@@ -28,7 +28,7 @@ function formatLeuco(data) {
   if (presentSubs.length > 0) {
     const subsStr = presentSubs
       .map(sub => `${LEUCO_LABELS[sub]} ${data[sub]}`)
-      .join(" / ");
+      .join(" | ");
     str += ` (${subsStr})`;
   }
 
@@ -71,7 +71,7 @@ function formatGasometria(prefix, data) {
 
   const paramsStr = presentParams
     .map(param => `${GASO_LABELS[param]} ${data[param]}`)
-    .join(" / ");
+    .join(" | ");
 
   return `${prefix}: ${paramsStr}`;
 }
@@ -169,7 +169,7 @@ function formatLabsOutput(byDate) {
     }
 
     if (parts.length > 0) {
-      outputLines.push(`${date}: ${parts.join(" / ")}`);
+      outputLines.push(`${date}: ${parts.join(" | ")}`);
     }
   }
 
