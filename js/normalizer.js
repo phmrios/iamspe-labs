@@ -31,6 +31,93 @@ function sanitizeRawText(raw) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   ETAPA 1b — Reconstrução de quebras de linha
+══════════════════════════════════════════════════════════════ */
+
+/**
+ * Linhas acima deste tamanho são tratadas como laudo "achatado".
+ *
+ * Por que isso existe:
+ * Dependendo do visualizador de PDF, o laudo inteiro é copiado em uma
+ * única linha. Todos os parsers são orientados a linha, então
+ * reinserimos as quebras nos pontos conhecidos do layout do laudo.
+ * Laudos copiados normalmente têm linhas curtas e não são tocados.
+ */
+const FLAT_LINE_MIN_LENGTH = 250;
+
+// Rótulos do cabeçalho institucional — cada um inicia uma linha de ruído
+const HEADER_LABEL_SPLIT =
+  /\s+(?=SERVIÇO DE LABORATÓRIO|LABORATÓRIO BIOFAST|Diretor Técnico:|Responsável Técnico:|Nº CEVS:|Av\.\s|Emissão:|Pedido:|Prontuário:|Data Nasc\.|Solicitante:|Setor solicitante:|Responsável:|Atendimento:|Os resultados d|A interpretação correta)/g;
+
+// Fim dos disclaimers — o que vem depois é conteúdo útil
+const DISCLAIMER_END_SPLIT = /(médico assistente\.|histórico clínico do paciente\.)\s*/g;
+
+// Assinatura "NOME EM CAPS CRF 39952" ao final de cada exame → removida
+const SIGNATURE_INLINE =
+  /(?:^|\s)(?:[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ][A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ'.]+\s+){1,8}(?:CRF|CRM|CRBIO|CRBM|CRA)\s*[-:]?\s*\d[\d\/]*(?:-[A-Z])?(?=\s|$)/g;
+
+// Cabeçalho de tabela de resultados: "Resultado Valores de referência Método"
+const TABLE_HEADER_INLINE =
+  /\s*((?:ERITROGRAMA|LEUCOGRAMA)?\s*Resultados?\s+(?:Resultados anteriores\s+)?Valor(?:es)? de referência\*?\s+(?:Método|Metodologia)(?:\s+Resultados anteriores(?!\s*[:(]))?)\s*/g;
+
+/**
+ * Regex que casa letras com ou sem acento (rótulos do dicionário estão
+ * normalizados, o texto do laudo não).
+ */
+function accentInsensitivePattern(normalizedLabel) {
+  const variants = { a: "aáàâã", e: "eéê", i: "ií", o: "oóôõ", u: "uú", c: "cç" };
+  return normalizedLabel
+    .replace(/[.*+?^${}()|[\]\\\/-]/g, "\\$&")
+    .replace(/[aeiouc]/g, ch => `[${variants[ch]}]`)
+    .replace(/ /g, "\\s+");
+}
+
+/**
+ * Quebra antes de cada analito de painel/hemograma seguido de valor.
+ * Ex: "pH 7,332 ... pCO2 42,1 ..." → uma linha por parâmetro.
+ * Exigir número logo após o rótulo evita quebrar em texto corrido
+ * ("o RNI alvo é na faixa de 2,0 a 3,0").
+ */
+let analyteSplitRegex = null;
+function getAnalyteSplitRegex() {
+  if (analyteSplitRegex) return analyteSplitRegex;
+  const labels = [...Object.keys(ALIASES_PANEL), ...Object.keys(ALIASES_HEMO)]
+    .sort((a, b) => b.length - a.length)  // mais longo primeiro
+    .map(accentInsensitivePattern);
+  analyteSplitRegex = new RegExp(
+    `\\s+(?=(?:${labels.join("|")}):?\\s+-?\\d)`,
+    "gi"
+  );
+  return analyteSplitRegex;
+}
+
+function reflowFlatLine(line) {
+  return line
+    .replace(HEADER_LABEL_SPLIT, "\n")
+    .replace(DISCLAIMER_END_SPLIT, "$1\n")
+    .replace(/_{5,}/g, "\n")
+    .replace(SIGNATURE_INLINE, "\n")
+    .replace(/\s*(?=Coletad[oa]\s*(?:em\s*)?:)/g, "\n")
+    .replace(TABLE_HEADER_INLINE, "\n$1\n")
+    .replace(/\s+(?=Resultados?\s*:|Resultados anteriores\s*[:(]|Microorganismo\s*:|[ÍI]ndice\s*:)/g, "\n")
+    .replace(getAnalyteSplitRegex(), "\n")
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Reinsere quebras de linha em linhas "achatadas"; demais linhas intactas.
+ */
+function restoreLineBreaks(text) {
+  return text
+    .split("\n")
+    .map(line => (line.length >= FLAT_LINE_MIN_LENGTH ? reflowFlatLine(line) : line))
+    .join("\n");
+}
+
+/* ══════════════════════════════════════════════════════════════
    ETAPA 2 — Remoção de ruído institucional
 ══════════════════════════════════════════════════════════════ */
 
@@ -174,6 +261,10 @@ function isExamHeader(line) {
   // Critério 3 (exceção): nome que começa com número de nomenclatura
   // "25 OH VITAMINA D" é válido; "94,6" não é
   if (/^\d/.test(nameWithoutParens) && !/^\d+\s+[A-Za-z]/.test(nameWithoutParens)) return false;
+
+  // Exceção ao critério 4: nome que é alias exato de exame conhecido
+  // ("HIV, anticorpos e antígeno p24, SANGUE" vem em caixa mista)
+  if (ALIASES_BLOCK[normalizeKey(nameWithoutParens.replace(/\s+/g, " "))]) return true;
 
   // Critério 4: maioria das letras em maiúsculo
   const letters = namePart.replace(/[^a-zA-ZÀ-ÿ]/g, "");

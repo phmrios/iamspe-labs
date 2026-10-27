@@ -10,6 +10,7 @@
  * Fluxo:
  *   texto bruto
  *     → sanitizeRawText
+ *     → restoreLineBreaks (laudo copiado em uma linha só)
  *     → removeNoise
  *     → splitIntoBlocks
  *     → [para cada bloco] extractCollectionDate + resolveBlockAlias + parser correto
@@ -62,6 +63,15 @@ function gasoOutputKey(type) {
   return GASO_PREFIX[type] || "GasoV";
 }
 
+/**
+ * "LACTATO, SANGUE ARTERIAL" → "LactatoA",  "..., SANGUE VENOSO" → "LactatoV"
+ */
+function lactatoKey(headerLine) {
+  if (/arterial/i.test(headerLine)) return "LactatoA";
+  if (/venos/i.test(headerLine))    return "LactatoV";
+  return "Lactato";
+}
+
 /* ─── Pipeline principal ─────────────────────────────────────── */
 
 /**
@@ -72,7 +82,7 @@ function gasoOutputKey(type) {
  */
 function processLabText(raw) {
   // Etapas 1 e 2: limpeza
-  const sanitized = sanitizeRawText(raw);
+  const sanitized = restoreLineBreaks(sanitizeRawText(raw));
   const clean     = removeNoise(sanitized);
 
   // Etapa 3: segmentação
@@ -196,7 +206,9 @@ function processLabText(raw) {
     }
 
     // ── Exame simples genérico
-    const data = parseSimples(block, blockAlias);
+    // Lactato arterial e venoso podem vir na mesma coleta → chaves separadas
+    const simpleKey = blockAlias === "Lactato" ? lactatoKey(headerLine) : blockAlias;
+    const data = parseSimples(block, simpleKey);
     if (Object.keys(data).length > 0) {
       mergeFields(dateEntry, data);
       recognizedCount++;

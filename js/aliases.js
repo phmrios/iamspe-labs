@@ -42,6 +42,20 @@ const ALIASES_HEMO = {
   linfocito: "linf",
   monocitos: "mono",
   monocito: "mono",
+  // Formas jovens / desvio à esquerda — só aparecem no laudo quando presentes
+  blastos: "blast",
+  blasto: "blast",
+  promielocitos: "promielo",
+  promielocito: "promielo",
+  mielocitos: "mielo",
+  mielocito: "mielo",
+  metamielocitos: "metamielo",
+  metamielocito: "metamielo",
+  bastonetes: "bast",
+  bastonete: "bast",
+  bastoes: "bast",
+  // Eritroblastos (por 100 leucócitos contados)
+  eritroblastos: "Eritrobl",
   // Plaquetas
   plaquetas: "PLQ",
   plaqueta: "PLQ",
@@ -297,6 +311,7 @@ const OUTPUT_ORDER = [
   "RDW",
   "LEUCO", // → inline com diferenciais
   "PLQ",
+  "Eritrobl",
 
   // Glicemia
   "GLIC",
@@ -352,6 +367,8 @@ const OUTPUT_ORDER = [
   "VHS",
   "FR",
   "Lactato",
+  "LactatoA",
+  "LactatoV",
 
   // Ferro e reservas
   "Fe",
@@ -401,8 +418,24 @@ const OUTPUT_ORDER = [
 ];
 
 // Diferenciais do leucograma — ordem e rótulos
-const LEUCO_ORDER = ["neut", "eos", "baso", "linf", "mono"];
+const LEUCO_ORDER = [
+  "blast",
+  "promielo",
+  "mielo",
+  "metamielo",
+  "bast",
+  "neut",
+  "eos",
+  "baso",
+  "linf",
+  "mono",
+];
 const LEUCO_LABELS = {
+  blast: "blast.",
+  promielo: "promielo.",
+  mielo: "mielo.",
+  metamielo: "metamielo.",
+  bast: "bast.",
   neut: "neut.",
   eos: "eos.",
   baso: "baso",

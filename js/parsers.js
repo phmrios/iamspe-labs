@@ -155,6 +155,12 @@ function parseHemograma(block) {
       continue;
     }
 
+    // Eritroblastos: "Eritroblastos: 5 /100 leucócitos contados"
+    if (key === "Eritrobl") {
+      if (!result[key]) result[key] = `${nums[0]}/100`;
+      continue;
+    }
+
     // Hb, Ht, VCM, HCM, CHCM, RDW — primeiro número
     if (!result[key]) result[key] = nums[0];
   }
