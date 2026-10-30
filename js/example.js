@@ -3,7 +3,8 @@
  *
  * Cobre todos os tipos de bloco suportados na v3:
  * hemograma, exames simples, eletrólitos, coagulograma (ambos os formatos),
- * gasometria, bilirrubinas, PCR, sorologias, microbiológicos.
+ * gasometria, analitos do gasômetro, TFGE, bilirrubinas, PCR, sorologias,
+ * microbiológicos.
  */
 
 "use strict";
@@ -38,6 +39,10 @@ CREATININA, PLASMA HEPARINIZADO
 Coletado em: 31/03/2026 20:11 Liberado em: 31/03/2026 20:52
 Resultado Resultados anteriores Valores de referência Método
 7,09 mg/dL 4,04 (15/03/2026) 0,70 a 1,20 mg/dL Colorimétrico Enzimático
+TAXA DE FILTRAÇÃO GLOMERULAR ESTIMADA (TFGE)
+Resultado Valores de referência* Método
+TFGE para etnia negra: 9 mL/min/1,73m2 >90 mL/min/1,73m2 Fórmula CKD-EPI para idade >=18anos
+TGFE para outras etnias: 8 mL/min/1,73m2
 __________________________________________________________________________________________________________________
 ASPARTATO AMINO TRANSFERASE (TGO), PLASMA HEPARINIZADO
 Coletado em:31/03/2026 20:11 Liberado em: 31/03/2026 20:55
@@ -63,6 +68,11 @@ POTÁSSIO, PLASMA HEPARINIZADO
 Coletado em: 31/03/2026 20:11 Liberado em: 31/03/2026 20:47
 Resultado Resultados anteriores Valores de referência Método
 5,9 mmol/L 3,6 (15/03/2026) 3,5 a 5,1 mmol/L Eletrodo íon seletivo (ISE)
+__________________________________________________________________________________________________________________
+CLORETOS, PLASMA HEPARINIZADO
+Coletado em: 31/03/2026 20:11 Liberado em: 31/03/2026 20:47
+Resultado Resultados anteriores Valores de referência Método
+104 mmol/L 101 (15/03/2026) 98 a 107 mmol/L Eletrodo íon seletivo (ISE)
 __________________________________________________________________________________________________________________
 HEMOGRAMA,SANGUE TOTAL EDTA
 Coletado em: 31/03/2026 20:11 Liberado em: 31/03/2026 20:42
@@ -110,6 +120,18 @@ pO2 28,9 mmHg 19,7 (15/03/2026) 25,00 a 40,00 mmHg
 HCO3 18 mmol/L 28,6 (15/03/2026) 22,00 a 29,00 mmol/L
 BE -9.8 mmol/L 2.4 (15/03/2026) 0 a +/- 4mmol/L
 sO2 46,7 % 29,6 (15/03/2026) 40,00 a 70,00%
+__________________________________________________________________________________________________________________
+SÓDIO, SANGUE VENOSO
+Coletado em: 31/03/2026 20:11 Liberado em: 01/04/2026 00:24
+Resultado Valores de referência Método
+140 mmol/L 135 a 145 mmol/L Potenciometria
+Resultados anteriores: 134 (15/03/2026)
+__________________________________________________________________________________________________________________
+HEMOGLOBINA, SANGUE VENOSO
+Coletado em: 31/03/2026 20:11 Liberado em: 01/04/2026 00:24
+Resultado Valores de referência Método
+13,8 g/dL 13,0 a 18,0 g/dL Colorimétrico
+Resultados anteriores: 14,0 (15/03/2026)
 __________________________________________________________________________________________________________________
 CÁLCIO IONIZADO, PLASMA HEPARINIZADO
 Coletado em: 31/03/2026 20:11 Liberado em: 01/04/2026 00:49

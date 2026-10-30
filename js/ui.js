@@ -89,7 +89,7 @@ function handleProcess() {
   if (result.ignoredCount > 0) {
     // Exibe aviso complementar sem apagar a mensagem de sucesso
     setTimeout(() => {
-      msgWarn.textContent = `${result.ignoredCount} bloco(s) ignorados (sem data ou fora do escopo da v3).`;
+      msgWarn.textContent = `${result.ignoredCount} bloco(s) ignorados (sem data ou fora do escopo da v3.2).`;
       msgWarn.classList.add("visible");
     }, 80);
   }

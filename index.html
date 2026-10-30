@@ -151,7 +151,7 @@ footer { border-top: 1px solid var(--borda); background: #eef4f0; padding: .9rem
 <!-- HEADER -->
 <header>
   <div class="header-inner">
-    <div class="header-badge" aria-hidden="true">LABS v3</div>
+    <div class="header-badge" aria-hidden="true">LABS v3.2</div>
     <div class="header-titles">
       <h1>IAMSPE Labs — Padronizador de Exames Laboratoriais</h1>
       <p>Extração e organização automática de laudos. Uso exclusivamente operacional de apoio.</p>
@@ -236,7 +236,7 @@ footer { border-top: 1px solid var(--borda); background: #eef4f0; padding: .9rem
     </div>
     <div class="card">
       <p class="section-title">Sistemas suportados</p>
-      <p class="section-desc">A v3 reconhece dois formatos de laudo do IAMSPE:</p>
+      <p class="section-desc">A v3.2 reconhece dois formatos de laudo do IAMSPE:</p>
       <ul style="font-size:.875rem;color:var(--texto-suave);line-height:1.8;padding-left:1.2rem;">
         <li><strong>Ambulatório</strong> — SERVIÇO DE LABORATÓRIO DE ANÁLISES CLÍNICAS (material: SANGUE, SORO, URINA)</li>
         <li><strong>Pronto-socorro</strong> — LABORATÓRIO BIOFAST (material: PLASMA HEPARINIZADO, PLASMA CITRATADO, SANGUE TOTAL EDTA, SANGUE VENOSO, SANGUE ARTERIAL)</li>
@@ -245,16 +245,18 @@ footer { border-top: 1px solid var(--borda); background: #eef4f0; padding: .9rem
     <div class="card">
       <p class="section-title">Exemplo de saída</p>
       <div class="example-block">#LABS:
-31/03/2026: Hb 14,2 | Ht 42,1 | VCM 89,2 | HCM 30,1 | CHCM 33,7 | RDW 13,3 | LEUCO 14,72 (neut. 12,19 | eos. 0,03 | baso 0,03 | linf. 1,53 | mono 0,94) | PLQ 186 | U 214,8 | CR 7,09 | Na 142 | K 5,9 | CaI 1,15 | TGO 127 | TGP 42 | FAL 246 | GGT 466 | TP Ativ 50,7% (RNI 1,39) | TTPA 59,30s (razão 1,81) | GasoV: pH 7,215 | pCO2 45,4 | pO2 28,9 | HCO3 18 | BE -9,8 | sO2 46,7 | PCR 46,74 | Lactato 4,76</div>
+31/03/2026: Hb 14,2 | Ht 42,1 | VCM 89,2 | HCM 30,1 | CHCM 33,7 | RDW 13,3 | LEUCO 14,72 (neut. 12,19 | eos. 0,03 | baso 0,03 | linf. 1,53 | mono 0,94) | PLQ 186 | U 214,8 | CR 7,09 | TFGe negra 9 / outras 8 | Na 142 | K 5,9 | Cl 104 | CaI 1,15 | TGO 127 | TGP 42 | FAL 246 | GGT 466 | TP Ativ 50,7% (RNI 1,39) | TTPA 59,30s (razão 1,81) | GasoV: pH 7,215 | pCO2 45,4 | pO2 28,9 | HCO3 18 | BE -9,8 | sO2 46,7 | NaV 140 | HbV 13,8 | LactatoA 4,76 | PCR 46,74</div>
     </div>
     <div class="card">
       <p class="section-title">Notas importantes</p>
       <ul style="font-size:.875rem;color:var(--texto-suave);line-height:1.7;padding-left:1.2rem;">
-        <li>Exames sem data de coleta reconhecível são ignorados (ex: TFGE).</li>
+        <li>Exames sem data de coleta reconhecível são ignorados.</li>
+        <li>TFGE sai com os dois valores do laudo: <code>TFGe negra 45 / outras 39</code>.</li>
         <li>Valores são apresentados sem unidade e sem intervalo de referência.</li>
         <li>Leucograma: valores absolutos em mil/mm³. Biofast fornece /mm³ — a ferramenta converte automaticamente.</li>
         <li>Sorologias aparecem como: <code>HBsAg NR</code>, <code>HCV NR</code>, <code>HIV NR</code>.</li>
         <li>Gasometria: <code>GasoV</code> (venosa), <code>GasoA</code> (arterial), <code>GasoC</code> (capilar).</li>
+        <li>Na, K, Cl, CaI, glicose, Hb, Ht e lactato do gasômetro (material SANGUE VENOSO/ARTERIAL) saem logo após a gasometria, com sufixo: <code>NaV</code>, <code>KA</code>, <code>HbV</code>. Sem sufixo (<code>Na</code>, <code>Hb</code>) são os valores da bioquímica/hemograma.</li>
         <li><strong>Não compartilhe laudos com dados identificáveis em ambientes não seguros.</strong></li>
       </ul>
     </div>
@@ -284,6 +286,7 @@ footer { border-top: 1px solid var(--borda); background: #eef4f0; padding: .9rem
       <h2>Versão atual</h2>
       <p><strong>v3.0</strong> — Suporta laudos do ambulatório e do pronto-socorro (Biofast). Contempla hemograma, bioquímica básica, eletrólitos, coagulograma (TP/TTPA), gasometria (venosa/arterial/capilar), lactato, perfil lipídico, função hepática, bilirrubinas, proteínas, metabolismo do ferro, tireoide, vitaminas, sorologias qualitativas e exames microbiológicos.</p>
       <p><strong>v3.1</strong> — Aceita laudos copiados em uma única linha (sem quebras). Hemograma passa a exibir formas jovens (blastos, promielócitos, mielócitos, metamielócitos, bastonetes) e eritroblastos. Lactato arterial e venoso da mesma coleta saem separados (LactatoA / LactatoV).</p>
+      <p><strong>v3.2</strong> — Inclui cloretos e TFGE. Na, K, Cl, CaI, glicose, Hb, Ht e lactato do gasômetro ganham sufixo do tipo de coleta (NaV, KV...) e não se misturam mais com os valores da bioquímica.</p>
     </div>
   </div><!-- /panel-avisos -->
 
@@ -293,7 +296,7 @@ footer { border-top: 1px solid var(--borda); background: #eef4f0; padding: .9rem
 <footer>
   <div class="footer-inner">
     <strong>Revise sempre a saída com o laudo original antes de utilizar.</strong><br>
-    IAMSPE Labs v3 · Apoio operacional · Processamento local · Sem backend
+    IAMSPE Labs v3.2 · Apoio operacional · Processamento local · Sem backend
   </div>
 </footer>
 

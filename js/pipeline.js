@@ -64,12 +64,16 @@ function gasoOutputKey(type) {
 }
 
 /**
- * "LACTATO, SANGUE ARTERIAL" → "LactatoA",  "..., SANGUE VENOSO" → "LactatoV"
+ * "SÓDIO, SANGUE VENOSO" → "NaV",  "LACTATO, SANGUE ARTERIAL" → "LactatoA"
+ * Outros materiais ("SÓDIO, SANGUE") e demais exames mantêm a chave original.
  */
-function lactatoKey(headerLine) {
-  if (/arterial/i.test(headerLine)) return "LactatoA";
-  if (/venos/i.test(headerLine))    return "LactatoV";
-  return "Lactato";
+function gasometerKey(key, headerLine) {
+  if (!GASOMETER_KEYS.includes(key)) return key;
+  const material = headerLine.split(",").pop();
+  if (/arterial/i.test(material)) return `${key}A`;
+  if (/venos/i.test(material))    return `${key}V`;
+  if (/capilar/i.test(material))  return `${key}C`;
+  return key;
 }
 
 /* ─── Pipeline principal ─────────────────────────────────────── */
@@ -95,7 +99,7 @@ function processLabText(raw) {
   for (const block of blocks) {
     const date = extractCollectionDate(block);
 
-    // Bloco sem data reconhecível → ignorar silenciosamente (ex: TFGE)
+    // Bloco sem data reconhecível → ignorar silenciosamente
     if (!date) { ignoredCount++; continue; }
 
     const headerLine = block.split("\n")[0].trim();
@@ -206,11 +210,13 @@ function processLabText(raw) {
     }
 
     // ── Exame simples genérico
-    // Lactato arterial e venoso podem vir na mesma coleta → chaves separadas
-    const simpleKey = blockAlias === "Lactato" ? lactatoKey(headerLine) : blockAlias;
+    // Valores do gasômetro não se misturam com os da bioquímica → chaves separadas
+    const simpleKey = gasometerKey(blockAlias, headerLine);
     const data = parseSimples(block, simpleKey);
     if (Object.keys(data).length > 0) {
       mergeFields(dateEntry, data);
+      // TFGE vem colada ao final do bloco da creatinina
+      if (blockAlias === "CR") mergeFields(dateEntry, parseTFGE(block));
       recognizedCount++;
     } else {
       ignoredCount++;

@@ -10,6 +10,7 @@
  * - LEUCO com diferenciais inline: "LEUCO 6,06 (neut. 4,03 / eos. 0,02 / ...)"
  * - TP composto: "TP 13,6s / Ativ 89% (RNI 1,090)"  ou  "TP Ativ 50,7% (RNI 1,39)"
  * - TTPA composto: "TTPA 37,5s (razão 1,27)"
+ * - TFGe composta: "TFGe negra 45 / outras 39"
  * - Gasometria: "GasoV: pH 7,215 / pCO2 45,4 / pO2 28,9 / HCO3 18 / BE -9,8 / sO2 46,7"
  * - Qualitativas: "HBsAg NR"
  * - Microbiológicos: "CultAerobia(LBA) NEG"  ou  "CultFungo(LBA) POS: Fungo filamentoso..."
@@ -58,6 +59,13 @@ function formatTTPA(data) {
   if (data["TTPA_razao"]) str += ` (razão ${data["TTPA_razao"]})`;
 
   return str;
+}
+
+function formatTFGe(data) {
+  const parts = [];
+  if (data["TFGe_negra"])  parts.push(`negra ${data["TFGe_negra"]}`);
+  if (data["TFGe_outras"]) parts.push(`outras ${data["TFGe_outras"]}`);
+  return parts.length > 0 ? `TFGe ${parts.join(" / ")}` : null;
 }
 
 /**
@@ -134,6 +142,12 @@ function formatLabsOutput(byDate) {
 
       if (key === "TTPA") {
         const str = formatTTPA(data);
+        if (str) parts.push(str);
+        continue;
+      }
+
+      if (key === "TFGe") {
+        const str = formatTFGe(data);
         if (str) parts.push(str);
         continue;
       }

@@ -68,6 +68,10 @@ const ALIASES_BLOCK = {
   // Hemograma (bloco composto especializado)
   hemograma: "_HEMOGRAMA",
 
+  // Hb e Ht avulsos (gasômetro) — fora do hemograma
+  hemoglobina: "Hb",
+  hematocrito: "Ht",
+
   // Glicemia
   glicose: "GLIC",
   glicemia: "GLIC",
@@ -80,6 +84,8 @@ const ALIASES_BLOCK = {
   // Eletrólitos
   sodio: "Na",
   potassio: "K",
+  cloretos: "Cl",
+  cloreto: "Cl",
   magnesio: "Mg",
   fosforo: "P",
   calcio: "Ca",
@@ -214,6 +220,10 @@ const ALIASES_BLOCK = {
   bacterioscopia: "_MICRO_Bacterio",
 };
 
+// Só valem por nome exato: por prefixo, capturariam outros exames
+// ("HEMOGLOBINA S", "HEMOGLOBINA FETAL")
+const ALIASES_EXACT_ONLY = ["hemoglobina", "hematocrito"];
+
 /* ─── Aliases internos dos painéis compostos ──────────────────── */
 const ALIASES_PANEL = {
   // Bilirrubinas
@@ -300,6 +310,11 @@ const GASO_LABELS = {
 // Prefixo de rótulo por tipo de coleta
 const GASO_PREFIX = { V: "GasoV", A: "GasoA", C: "GasoC" };
 
+// Analitos que o gasômetro libera em blocos próprios ("SÓDIO, SANGUE VENOSO").
+// A mesma coleta pode trazer o valor da bioquímica ("SÓDIO, SANGUE"), diferente
+// → recebem sufixo do tipo de coleta (NaV, KA...) para não se sobrescreverem
+const GASOMETER_KEYS = ["Na", "K", "Cl", "CaI", "GLIC", "Hb", "Ht", "Lactato"];
+
 /* ─── Ordem fixa de exibição na saída ────────────────────────── */
 const OUTPUT_ORDER = [
   // Hemograma
@@ -320,8 +335,10 @@ const OUTPUT_ORDER = [
   // Função renal + eletrólitos
   "U",
   "CR",
+  "TFGe", // → composto: etnia negra + outras etnias
   "Na",
   "K",
+  "Cl",
   "Ca",
   "CaI",
   "Mg",
@@ -348,10 +365,11 @@ const OUTPUT_ORDER = [
   "TP", // → composto: seg (opcional) + ativ% + RNI
   "TTPA", // → composto: seg + razão
 
-  // Gasometria — ordem por tipo de coleta
-  "GasoV",
-  "GasoA",
-  "GasoC",
+  // Gasometria — ordem por tipo de coleta, seguida dos analitos do gasômetro
+  ...["V", "A", "C"].flatMap((type) => [
+    GASO_PREFIX[type],
+    ...GASOMETER_KEYS.map((key) => `${key}${type}`),
+  ]),
 
   // Lipídios
   "CT",
@@ -367,8 +385,6 @@ const OUTPUT_ORDER = [
   "VHS",
   "FR",
   "Lactato",
-  "LactatoA",
-  "LactatoV",
 
   // Ferro e reservas
   "Fe",

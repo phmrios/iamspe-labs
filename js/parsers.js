@@ -18,6 +18,7 @@
  *   parseQualitativo(block)     → string "NR" | "NEG" | "POS" | "INCONCL" | "R"
  *   parseMicrobiologico(block)  → { resultado, microorg }
  *   parseSimples(block, key)    → { [key]: valor }
+ *   parseTFGE(block)            → TFGe_negra, TFGe_outras
  */
 
 "use strict";
@@ -447,4 +448,22 @@ function parseSimples(block, blockKey) {
   }
 
   return {};
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TFGE
+   Não tem cabeçalho próprio nem data de coleta: vem colada ao final
+   do bloco da creatinina, com um valor para cada grupo:
+     TFGE para etnia negra: 45 mL/min/1,73m2 >90 mL/min/1,73m2 ...
+     TGFE para outras etnias: 39 mL/min/1,73m2
+   ("TGFE" é erro de digitação do próprio laudo.)
+══════════════════════════════════════════════════════════════ */
+
+function parseTFGE(block) {
+  const negra = block.match(/T[FG][FG]E para etnia negra\s*:\s*([<>]?\s*\d+)/i);
+  const outras = block.match(/T[FG][FG]E para outras etnias\s*:\s*([<>]?\s*\d+)/i);
+  return {
+    TFGe_negra: negra ? negra[1].replace(/\s/g, "") : null,
+    TFGe_outras: outras ? outras[1].replace(/\s/g, "") : null,
+  };
 }

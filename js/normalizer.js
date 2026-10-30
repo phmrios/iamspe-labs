@@ -47,7 +47,7 @@ const FLAT_LINE_MIN_LENGTH = 250;
 
 // Rótulos do cabeçalho institucional — cada um inicia uma linha de ruído
 const HEADER_LABEL_SPLIT =
-  /\s+(?=SERVIÇO DE LABORATÓRIO|LABORATÓRIO BIOFAST|Diretor Técnico:|Responsável Técnico:|Nº CEVS:|Av\.\s|Emissão:|Pedido:|Prontuário:|Data Nasc\.|Solicitante:|Setor solicitante:|Responsável:|Atendimento:|Os resultados d|A interpretação correta)/g;
+  /\s+(?=HOSPITAL DO SERVIDOR|SERVIÇO DE LABORATÓRIO|LABORATÓRIO BIOFAST|Diretor Técnico:|Responsável Técnico:|Nº CEVS:|Av\.\s|Emissão:|Pedido:|Prontuário:|Data Nasc\.|Solicitante:|Setor solicitante:|Responsável:|Atendimento:|Os resultados d|A interpretação correta)/g;
 
 // Fim dos disclaimers — o que vem depois é conteúdo útil
 const DISCLAIMER_END_SPLIT = /(médico assistente\.|histórico clínico do paciente\.)\s*/g;
@@ -411,6 +411,7 @@ function resolveBlockAlias(headerLine) {
   let bestMatch = null;
   let bestLength = 0;
   for (const [key, value] of Object.entries(ALIASES_BLOCK)) {
+    if (ALIASES_EXACT_ONLY.includes(key)) continue;
     if (nameClean.startsWith(key) && key.length > bestLength) {
       bestMatch  = value;
       bestLength = key.length;
